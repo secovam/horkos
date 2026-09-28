@@ -1,0 +1,61 @@
+{
+  "name": "horkos",
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "apps/*",
+      "packages/*"
+    ],
+    "catalog": {
+      "zod": "^4.5.4",
+      "typescript": "^6.0.3",
+      "varlock": "1.18.0",
+      "lucide-react": "^1.41.0",
+      "next-themes": "^0.4.6",
+      "react": "^19.2.8",
+      "react-dom": "^19.2.8",
+      "sonner": "^2.0.8",
+      "tailwindcss": "^4.3.3",
+      "better-auth": "1.7.5",
+      "@types/react": "^19.2.18",
+      "@types/react-dom": "^19.2.7",
+      "drizzle-orm": "1.0.0-rc.4"
+    }
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "check-types": "turbo run check-types",
+    "dev:web": "turbo run dev:bare -F web --",
+    "db:generate": "turbo run db:generate -F @horkos/db --",
+    "deploy": "turbo run deploy -F @horkos/infra --",
+    "destroy": "turbo run destroy -F @horkos/infra --",
+    "env:generate": "varlock codegen --path ./apps/web/ && varlock codegen --path ./packages/db/",
+    "postinstall": "varlock codegen --path ./apps/web/ && varlock codegen --path ./packages/db/",
+    "check": "ultracite check",
+    "fix": "ultracite fix",
+    "prepare": "lefthook install"
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260906.1",
+    "@horkos/config": "workspace:*",
+    "@shadcn/lint": "^0.2.0",
+    "@types/node": "^26.4.1",
+    "eslint-plugin-github": "6.1.2",
+    "eslint-plugin-sonarjs": "^4.2.1",
+    "lefthook": "^2.1.14",
+    "lint-staged": "^17.6.0",
+    "oxfmt": "^0.70.0",
+    "oxlint": "^1.85.0",
+    "oxlint-plugin-react-doctor": "^0.9.14",
+    "turbo": "^2.10.12",
+    "typescript": "catalog:",
+    "ultracite": "7.12.1",
+    "varlock": "catalog:"
+  },
+  "packageManager": "pnpm@12.4.1"
+}
