@@ -24,6 +24,7 @@ Alchemy (v2 beta, on Effect) stack that defines the Cloudflare resources: a D1 d
 
 - Required GitHub secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `ALCHEMY_PASSWORD`, `BETTER_AUTH_SECRET`. A guard step fails if any is empty, because `.env.schema` has fake dev defaults that would otherwise apply silently.
 - `ALCHEMY_PASSWORD` must match between deploy and destroy (state encryption).
+- Previews post a sticky PR comment with the Worker URL (`GitHub.Comment`, gated on `GitHub.GitHubEnv`, updated in place on each push). It needs `pull-requests: write` and the built-in `GITHUB_TOKEN`; no extra secret. The workflow exports `PULL_REQUEST` for deploy and destroy alike, so destroy also removes the comment.
 - Fork PRs are skipped; they get no secrets.
 
 ## Conventions
