@@ -51,7 +51,7 @@ The generated contract must match the template exactly and print correctly. Data
 TypeScript monorepo: TanStack Start web app plus shared packages, deployed to Cloudflare via Alchemy, orchestrated by Turborepo. Data and auth: Cloudflare D1 through Drizzle, Better Auth (email and password), documents in R2.
 
 - Package manager: **pnpm** (never `npm`/`yarn`/`bun install`). Bun is only a runtime.
-- `pnpm dev` runs everything; `pnpm dev:web` runs the web app only.
+- `pnpm dev` runs everything.
 - Lint + format: `pnpm fix` (Ultracite = Oxlint + Oxfmt). Lefthook runs it on pre-commit.
 - Typecheck: `pnpm check-types` (slow: `web` runs `vite build` first).
 

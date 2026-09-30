@@ -18,7 +18,6 @@ TanStack Start app (React 19, TanStack Router, Query, Form) built with Vite and 
 
 ## Commands
 
-- `pnpm dev:web`: plain Vite dev server on port 3001. Use root `pnpm dev` when you need D1 and auth bindings.
 - `pnpm turbo run check-types -F web`: runs `vite build`, then `tsc`.
 
 ## Conventions
