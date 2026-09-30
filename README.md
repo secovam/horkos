@@ -40,7 +40,7 @@ Usa siempre **pnpm** (nunca `npm`, `yarn` ni `bun install`); Bun solo se usa com
 
 ## Scripts
 
-- `pnpm dev`: inicia todo en modo desarrollo.
+- `pnpm dev`: inicia `alchemy dev` detrás de portless en https://horkos.localhost (los worktrees usan un prefijo; `PORTLESS=0 pnpm dev` lo omite).
 - `pnpm dev:web`: inicia solo la app web.
 - `pnpm build`: compila todo.
 - `pnpm check-types`: revisa tipos (lento: `web` ejecuta `vite build` primero).

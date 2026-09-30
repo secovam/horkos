@@ -16,10 +16,11 @@ export const web = Cloudflare.Website.Vite("web", {
   env: {
     DB: db,
     BETTER_AUTH_SECRET: Config.Redacted("BETTER_AUTH_SECRET"),
-    BETTER_AUTH_URL: Cloudflare.Worker.URL,
+    // portless sets PORTLESS_URL only under `pnpm dev`; auth origins must match it
+    BETTER_AUTH_URL: process.env.PORTLESS_URL ?? Cloudflare.Worker.URL,
   },
   dev: {
-    port: 3001,
+    port: Number(process.env.PORT ?? 3001),
   },
 });
 
