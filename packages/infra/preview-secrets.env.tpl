@@ -1,0 +1,4 @@
+CLOUDFLARE_API_TOKEN=op://dsqqh2guccqwkglosbq5533p3y/Preview%20Deployment/CLOUDFLARE_API_TOKEN
+CLOUDFLARE_ACCOUNT_ID=op://dsqqh2guccqwkglosbq5533p3y/Preview%20Deployment/CLOUDFLARE_ACCOUNT_ID
+ALCHEMY_PASSWORD=op://dsqqh2guccqwkglosbq5533p3y/Preview%20Deployment/ALCHEMY_PASSWORD
+BETTER_AUTH_SECRET=op://dsqqh2guccqwkglosbq5533p3y/Preview%20Deployment/BETTER_AUTH_SECRET
