@@ -8,7 +8,7 @@ Alchemy (v2 beta, on Effect) stack that defines the Cloudflare resources: a D1 d
 
 | File | Owns |
 | --- | --- |
-| `alchemy.run.ts` | Resources and the Worker bindings (`DB`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`) |
+| `alchemy.run.ts` | Resources and the Worker bindings (`DB`, `EMAIL`, `EMAIL_FROM`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`) |
 | `.env.schema` | Deploy secrets such as `ALCHEMY_PASSWORD` |
 
 ## Commands

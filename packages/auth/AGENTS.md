@@ -2,7 +2,7 @@
 
 ## Overview
 
-Better Auth setup. `createAuth(env, db)` builds the auth instance on top of the Drizzle adapter; the app calls it through `apps/web/src/services.ts`.
+Better Auth setup. `createAuth(env, db, sendMagicLink)` builds the auth instance on top of the Drizzle adapter; the app calls it through `apps/web/src/services.ts`.
 
 ## Key files
 
@@ -12,7 +12,9 @@ Better Auth setup. `createAuth(env, db)` builds the auth instance on top of the 
 
 ## Conventions
 
-- Only email and password sign in is enabled.
+- Only existing users can request a magic link. Password sign-in and self-registration are disabled.
+- Provision HR accounts out of band; the app does not expose account creation.
+- Magic-link email delivery is injected by the app; do not couple this package to Cloudflare or email rendering.
 - Auth tables live in `packages/db/src/schema/auth.ts`, not here.
 - Keep `tanstackStartCookies()` as the last plugin in the `plugins` list.
 
