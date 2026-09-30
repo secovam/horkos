@@ -15,6 +15,6 @@
 
 ## Commands
 
-- `pnpm dev`: `alchemy dev` behind portless at https://horkos.localhost (worktrees get a prefix; `PORTLESS=0 pnpm dev` bypasses). `pnpm dev:web`: web only (Vite).
+- `pnpm dev`: `alchemy dev` behind portless at https://horkos.localhost (worktrees get a prefix; `PORTLESS=0 pnpm dev` bypasses).
 - `pnpm db:generate`: generate Drizzle migrations.
 - `pnpm deploy` / `pnpm destroy`: Alchemy (interactive).
