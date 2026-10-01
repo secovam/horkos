@@ -1,32 +1,51 @@
-import { Button } from "@horkos/ui/components/button";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@horkos/ui/components/card";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { HouseIcon } from "lucide-react";
 
-import { authClient } from "@/lib/auth-client";
+import { PageHeader } from "@/components/page-header";
+import { getInvitationMetrics } from "@/functions/invitations";
+import { INVITATION_METRICS } from "@/lib/invitation-metrics";
 
 export const Route = createFileRoute("/_auth/dashboard")({
-  component: RouteComponent,
+  component: DashboardPage,
 });
 
-function RouteComponent() {
-  const { session } = Route.useRouteContext();
-  const navigate = useNavigate();
+function DashboardPage() {
+  const { data } = useQuery({
+    queryKey: ["invitations", "metrics"],
+    queryFn: () => getInvitationMetrics(),
+  });
 
   return (
-    <main className="grid h-svh place-items-center">
-      <div className="flex flex-col items-center gap-4">
-        <h1 className="text-4xl font-semibold">Horkos</h1>
-        <p className="text-muted-foreground">{session?.user.email}</p>
-        <Button
-          variant="outline"
-          onClick={() =>
-            authClient.signOut({
-              fetchOptions: { onSuccess: () => navigate({ to: "/login" }) },
-            })
-          }
-        >
-          Cerrar sesión
-        </Button>
-      </div>
-    </main>
+    <>
+      <PageHeader
+        icon={HouseIcon}
+        title="Inicio"
+        description="El avance de las invitaciones activas, de la invitación al contrato"
+      />
+
+      <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        {INVITATION_METRICS.map(({ key, label }) => (
+          <li key={key} className="grid">
+            <Card>
+              <CardHeader>
+                <CardDescription>{label}</CardDescription>
+                <CardTitle>
+                  <p className="text-primary text-3xl font-semibold tabular-nums">
+                    {data?.[key] ?? "–"}
+                  </p>
+                </CardTitle>
+              </CardHeader>
+            </Card>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }
