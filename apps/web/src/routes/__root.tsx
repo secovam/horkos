@@ -1,4 +1,4 @@
-import { Toaster } from "@horkos/ui/components/sonner";
+import { Toaster } from "@horkos/ui/components/toast";
 import {
   HeadContent,
   Outlet,
@@ -50,7 +50,7 @@ function RootDocument() {
       </head>
       <body>
         <Outlet />
-        <Toaster richColors />
+        <Toaster />
         <TanStackRouterDevtools position="bottom-left" />
         <Scripts />
       </body>

@@ -10,10 +10,10 @@ import {
   AlertDialogTrigger,
 } from "@horkos/ui/components/alert-dialog";
 import { Button } from "@horkos/ui/components/button";
+import { toast } from "@horkos/ui/components/toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { BanIcon, SendIcon } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 
 import { resendInvitation, revokeInvitation } from "@/functions/invitations";
 

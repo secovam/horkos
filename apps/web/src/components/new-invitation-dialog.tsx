@@ -16,11 +16,11 @@ import {
   FieldLabel,
 } from "@horkos/ui/components/field";
 import { Input } from "@horkos/ui/components/input";
+import { toast } from "@horkos/ui/components/toast";
 import { useForm } from "@tanstack/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { PlusIcon } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 
 import { createInvitation } from "@/functions/invitations";
 import { newInvitationSchema } from "@/lib/invitation";
