@@ -50,7 +50,9 @@ export function NewInvitationDialog() {
     onSubmit: async ({ value }) => {
       try {
         await createInvitation({ data: value });
-        toast.success("Invitación enviada");
+        toast.success("Invitación enviada", {
+          description: `Se envió una invitación a ${value.employeeName} (${value.email})`,
+        });
         setOpen(false);
         form.reset();
       } catch (error) {

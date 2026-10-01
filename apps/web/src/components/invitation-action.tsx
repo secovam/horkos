@@ -17,6 +17,12 @@ import { useState } from "react";
 
 import { resendInvitation, revokeInvitation } from "@/functions/invitations";
 
+interface Invitation {
+  id: string;
+  employeeName: string;
+  email: string;
+}
+
 const ACTIONS = {
   resend: {
     icon: SendIcon,
@@ -27,6 +33,8 @@ const ACTIONS = {
     variant: "default",
     triggerVariant: "ghost-primary",
     success: "Invitación reenviada",
+    successDescription: ({ employeeName, email }: Invitation) =>
+      `Se reenvió la invitación a ${employeeName} (${email})`,
     run: resendInvitation,
   },
   revoke: {
@@ -38,6 +46,8 @@ const ACTIONS = {
     variant: "destructive",
     triggerVariant: "ghost-destructive",
     success: "Invitación revocada",
+    successDescription: ({ employeeName, email }: Invitation) =>
+      `Se revocó la invitación de ${employeeName} (${email})`,
     run: revokeInvitation,
   },
 } as const;
@@ -47,7 +57,7 @@ export function InvitationAction({
   invitation,
 }: {
   action: keyof typeof ACTIONS;
-  invitation: { id: string; employeeName: string };
+  invitation: Invitation;
 }) {
   const {
     icon: Icon,
@@ -57,6 +67,7 @@ export function InvitationAction({
     variant,
     triggerVariant,
     success,
+    successDescription,
     run,
   } = ACTIONS[action];
 
@@ -66,7 +77,9 @@ export function InvitationAction({
   const mutation = useMutation({
     mutationFn: () => run({ data: { id: invitation.id } }),
     onSuccess: () => {
-      toast.success(success);
+      toast.success(success, {
+        description: successDescription(invitation),
+      });
       setOpen(false);
     },
     onError: (error) => toast.error(error.message),
