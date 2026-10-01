@@ -23,7 +23,6 @@ import {
   HouseIcon,
   LogOutIcon,
   MailIcon,
-  ScaleIcon,
 } from "lucide-react";
 
 import { authClient } from "@/lib/auth-client";
@@ -52,10 +51,11 @@ export function AppSidebar({
               size="lg"
               render={<Link to="/dashboard" onClick={closeMobile} />}
             >
-              <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                <ScaleIcon className="size-4" />
-              </div>
-              <span className="text-base font-semibold">Horkos</span>
+              <img
+                src="/logo-secovam.png"
+                alt="Grupo Secovam"
+                className="h-9 w-auto"
+              />
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
