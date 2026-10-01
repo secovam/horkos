@@ -26,7 +26,12 @@ export const invitation = sqliteTable(
       .notNull(),
     sentAt: integer("sent_at", { mode: "timestamp_ms" }).notNull(),
     revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+    openedAt: integer("opened_at", { mode: "timestamp_ms" }),
     submittedAt: integer("submitted_at", { mode: "timestamp_ms" }),
+    hrCompletedAt: integer("hr_completed_at", { mode: "timestamp_ms" }),
+    contractGeneratedAt: integer("contract_generated_at", {
+      mode: "timestamp_ms",
+    }),
   },
   (table) => [
     uniqueIndex("invitation_active_email_idx")
