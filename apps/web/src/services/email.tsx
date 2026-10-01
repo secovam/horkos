@@ -4,6 +4,7 @@ import { MagicLinkEmail } from "@/emails/magic-link";
 
 export async function renderMagicLinkEmail(url: string) {
   const html = await render(<MagicLinkEmail url={url} />);
+
   return { html, text: toPlainText(html) };
 }
 

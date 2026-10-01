@@ -6,11 +6,13 @@ export const Route = createFileRoute("/_auth")({
   component: AuthLayout,
   beforeLoad: async () => {
     const session = await getUser();
+
     if (!session) {
       throw redirect({
         to: "/login",
       });
     }
+
     return { session };
   },
   loader: ({ context }) => {

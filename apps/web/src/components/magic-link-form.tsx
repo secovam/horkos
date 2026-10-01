@@ -11,6 +11,7 @@ import { authClient } from "@/lib/auth-client";
 
 export default function MagicLinkForm() {
   const [emailSent, setEmailSent] = useState(false);
+
   const form = useForm({
     defaultValues: { email: "" },
     onSubmit: async ({ value }) => {

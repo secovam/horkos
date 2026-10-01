@@ -8,6 +8,7 @@ import { createAuth } from "../../src/services";
 export default definePlugin((nitroApp) => {
   nitroApp.hooks.hook("request", async (event) => {
     const auth = await createAuth();
+
     const identify = createAuthIdentifier(
       // SAFETY: createAuth returns a better-auth instance, which satisfies BetterAuthInstance.
       auth as BetterAuthInstance,
@@ -16,6 +17,7 @@ export default definePlugin((nitroApp) => {
         maskEmail: true,
       }
     );
+
     await identify({
       path: new URL(event.req.url).pathname,
       headers: event.req.headers,
