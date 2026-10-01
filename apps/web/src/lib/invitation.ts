@@ -20,7 +20,7 @@ export function invitationStatus(invitation: {
 }
 
 export const INVITATION_STATUS = {
-  pending: { label: "Pendiente", variant: "outline" },
+  pending: { label: "Pendiente", variant: "secondary" },
   submitted: { label: "Recibida", variant: "default" },
   revoked: { label: "Revocada", variant: "destructive" },
 } as const satisfies Record<

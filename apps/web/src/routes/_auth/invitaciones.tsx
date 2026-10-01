@@ -95,7 +95,9 @@ function InvitationsPage() {
             </div>
             <div className="grid gap-1">
               <CardTitle>
-                <h1 className="text-xl font-semibold">Invitaciones</h1>
+                <h1 className="text-primary text-xl font-semibold">
+                  Invitaciones
+                </h1>
               </CardTitle>
               <CardDescription>
                 Invita a empleados a subir sus documentos y completar sus datos
