@@ -49,9 +49,9 @@ function AuthLayout() {
     <SidebarProvider>
       <AppSidebar user={session.user} />
       <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-2 px-4">
+        <header className="flex h-16 shrink-0 items-center gap-2 px-4">
           <SidebarTrigger />
-          <div className="flex h-4">
+          <div className="mr-2 flex h-4">
             <Separator orientation="vertical" />
           </div>
           <Breadcrumb>
