@@ -8,6 +8,14 @@ import {
   CardTitle,
 } from "@horkos/ui/components/card";
 import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@horkos/ui/components/empty";
+import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
@@ -27,7 +35,9 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   MailIcon,
+  MailXIcon,
   SearchIcon,
+  SearchXIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -53,18 +63,30 @@ export const Route = createFileRoute("/_auth/invitaciones")({
 
 const dateFormat = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium" });
 
-function tableMessage(rowCount: number | undefined, q: string) {
-  if (rowCount === undefined) {
-    return "Cargando…";
+function emptyState(tab: InvitationTab, q: string) {
+  if (q) {
+    return {
+      icon: <SearchXIcon />,
+      title: "Sin resultados",
+      description: "Ninguna invitación coincide con la búsqueda.",
+    };
   }
 
-  if (rowCount > 0) {
-    return null;
+  if (tab === "revoked") {
+    return {
+      icon: <MailXIcon />,
+      title: "No hay invitaciones revocadas",
+      description: "Las invitaciones que revoques aparecerán aquí.",
+    };
   }
 
-  return q
-    ? "Ninguna invitación coincide con la búsqueda."
-    : "Aún no hay invitaciones aquí.";
+  return {
+    icon: <MailIcon />,
+    title: "Aún no hay invitaciones",
+    description:
+      "Invita a un empleado para que suba sus documentos y complete sus datos.",
+    action: <NewInvitationDialog />,
+  };
 }
 
 function InvitationsPage() {
@@ -96,7 +118,9 @@ function InvitationsPage() {
     : 0;
 
   const isActiveTab = search.tab === "active";
-  const emptyMessage = tableMessage(data?.rows.length, debouncedQ);
+
+  const empty =
+    data?.rows.length === 0 ? emptyState(search.tab, debouncedQ) : null;
 
   return (
     <>
@@ -215,12 +239,30 @@ function InvitationsPage() {
                 </TableRow>
               );
             })}
-            {emptyMessage ? (
+            {data ? null : (
               <TableRow>
                 <TableCell colSpan={5}>
                   <p className="text-muted-foreground py-8 text-center">
-                    {emptyMessage}
+                    Cargando…
                   </p>
+                </TableCell>
+              </TableRow>
+            )}
+            {empty ? (
+              <TableRow>
+                <TableCell colSpan={5}>
+                  <div className="whitespace-normal">
+                    <Empty>
+                      <EmptyHeader>
+                        <EmptyMedia variant="icon">{empty.icon}</EmptyMedia>
+                        <EmptyTitle>{empty.title}</EmptyTitle>
+                        <EmptyDescription>{empty.description}</EmptyDescription>
+                      </EmptyHeader>
+                      {"action" in empty ? (
+                        <EmptyContent>{empty.action}</EmptyContent>
+                      ) : null}
+                    </Empty>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : null}
