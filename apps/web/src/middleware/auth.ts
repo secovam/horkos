@@ -15,3 +15,13 @@ export const authMiddleware = createMiddleware().server(
     });
   }
 );
+
+export const requireSessionMiddleware = createMiddleware()
+  .middleware([authMiddleware])
+  .server(({ next, context }) => {
+    if (!context.session) {
+      throw new Error("No autorizado");
+    }
+
+    return next({ context: { session: context.session } });
+  });
