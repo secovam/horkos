@@ -8,8 +8,9 @@ export default defineConfig({
     ...ultracite.ignorePatterns!,
     "packages/ui/**",
     "packages/db/src/migrations/**",
-    ".agents/skills/**",
-    ".claude/skills/**",
+    ".agents/**",
+    ".claude/**",
+    "tools/oxlint/anti-slop/**",
     "**/CLAUDE.md",
   ],
 });

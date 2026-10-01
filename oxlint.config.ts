@@ -1,5 +1,4 @@
 import { defineConfig } from "oxlint";
-import antiSlop from "ultracite/oxlint/anti-slop";
 import core from "ultracite/oxlint/core";
 import { jsPluginSettings, selectJsPlugins } from "ultracite/oxlint/js-plugins";
 import react from "ultracite/oxlint/react";
@@ -10,27 +9,25 @@ import tanstackJsPlugins from "ultracite/oxlint/tanstack/js-plugins";
 const jsPlugins = selectJsPlugins(["github", "sonarjs", "react-doctor"]);
 
 export default defineConfig({
-  extends: [
-    core,
-    react,
-    tanstack,
-    tanstackJsPlugins,
-    shadcn,
-    antiSlop,
-    jsPlugins,
-  ],
+  extends: [core, react, tanstack, tanstackJsPlugins, shadcn, jsPlugins],
   ignorePatterns: [
     // oxlint-disable-next-line typescript/no-non-null-assertion
     ...core.ignorePatterns!,
     "packages/ui/**",
-    ".agents/skills/**",
-    ".claude/skills/**",
+    ".agents/**",
+    ".claude/**",
+    "tools/oxlint/anti-slop/**",
   ],
   jsPlugins: [
     // oxlint-disable-next-line typescript/no-non-null-assertion
     ...jsPlugins.jsPlugins!,
     // oxlint-disable-next-line typescript/no-non-null-assertion
     ...shadcn.jsPlugins!,
+    { name: "anti-slop", specifier: "./tools/oxlint/anti-slop/index.ts" },
+    {
+      name: "anti-slop-effect",
+      specifier: "./tools/oxlint/anti-slop/effect/index.ts",
+    },
   ],
   settings: jsPluginSettings,
   overrides: [
@@ -88,7 +85,32 @@ export default defineConfig({
     },
   ],
   rules: {
+    "anti-slop-effect/no-manual-effect-error-tag": "error",
+    "anti-slop-effect/no-manual-tag-comparison": "error",
+    "anti-slop-effect/no-manual-tagged-construction": "error",
+    "anti-slop-effect/no-service-constructor-imports": "error",
+    "anti-slop-effect/prefer-effect-match": "error",
+    "anti-slop/no-array-filter-map": "error",
+    "anti-slop/no-chained-type-assertions": "error",
+    "anti-slop/no-conditional-empty-object-spread": "error",
+    "anti-slop/no-known-value-widening": "error",
+    "anti-slop/no-module-mocking": "error",
+    "anti-slop/no-object-parameters": "error",
+    "anti-slop/no-reduce-accumulator-copy": "error",
+    "anti-slop/no-reflect-apply": "error",
+    "anti-slop/no-reflect-get": "error",
+    // Type predicates are the named boundary this rule pushes toward.
+    "anti-slop/no-runtime-typeof": ["error", { allowInTypeGuards: true }],
+    "anti-slop/no-shape-in-symbol-names": "error",
+    "anti-slop/no-unknown-parameters": "error",
+    "anti-slop/no-unknown-returns": "error",
+    "anti-slop/no-unknown-type-aliases": "error",
+    "anti-slop/no-unsafe-dictionary-type": "error",
+    "anti-slop/no-widen-then-assert": "error",
+    "anti-slop/require-readable-spacing": "error",
+    "anti-slop/require-safety-comment-for-type-assertion": "error",
     "func-style": ["error", "declaration"],
+    "oxc/no-accumulating-spread": "error",
     "react/function-component-definition": [
       "error",
       {
@@ -96,5 +118,9 @@ export default defineConfig({
         unnamedComponents: "function-expression",
       },
     ],
+    // These core rules conflict with anti-slop (fix/break loops).
+    "typescript/consistent-indexed-object-style": "off",
+    "unicorn/no-immediate-mutation": "off",
+    "unicorn/prefer-reflect-apply": "off",
   },
 });
