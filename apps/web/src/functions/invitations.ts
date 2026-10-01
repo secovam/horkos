@@ -141,6 +141,7 @@ export const resendInvitation = createServerFn({ method: "POST" })
       .select({
         email: invitation.email,
         employeeName: invitation.employeeName,
+        tokenHash: invitation.tokenHash,
       })
       .from(invitation)
       .where(and(eq(invitation.id, data.id), isNull(invitation.revokedAt)));
@@ -149,17 +150,38 @@ export const resendInvitation = createServerFn({ method: "POST" })
       throw new Error("Solo se pueden reenviar invitaciones activas.");
     }
 
-    // ponytail: pending-token state is needed if the new link must work before delivery finishes.
-    await emailInvitation(token, active);
-
-    const [updated] = await db
+    // Swapping the hash only while it still matches what we read makes concurrent resends
+    // lose before any email goes out, so no recipient gets a link that is already dead.
+    const [swapped] = await db
       .update(invitation)
       .set({ tokenHash, sentAt: new Date() })
-      .where(and(eq(invitation.id, data.id), isNull(invitation.revokedAt)))
+      .where(
+        and(
+          eq(invitation.id, data.id),
+          eq(invitation.tokenHash, active.tokenHash),
+          isNull(invitation.revokedAt)
+        )
+      )
       .returning({ id: invitation.id });
 
-    if (!updated) {
-      throw new Error("Solo se pueden reenviar invitaciones activas.");
+    if (!swapped) {
+      throw new Error(
+        "La invitación cambió mientras se reenviaba. Intenta de nuevo."
+      );
+    }
+
+    try {
+      await emailInvitation(token, active);
+    } catch (error) {
+      // Put the previous link back so a failed delivery never leaves the employee without one.
+      await db
+        .update(invitation)
+        .set({ tokenHash: active.tokenHash })
+        .where(
+          and(eq(invitation.id, data.id), eq(invitation.tokenHash, tokenHash))
+        );
+
+      throw error;
     }
   });
 
