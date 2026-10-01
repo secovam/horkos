@@ -33,10 +33,13 @@ export const INVITATIONS_PAGE_SIZE = 10;
 /* oxlint-disable promise/prefer-await-to-then, github/no-then -- Zod .catch(), not a Promise. */
 export const invitationSearchSchema = z.object({
   tab: z.enum(["active", "revoked"]).default("active").catch("active"),
-  q: z.string().max(200).default("").catch(""),
   page: z.number().int().min(1).default(1).catch(1),
 });
 /* oxlint-enable promise/prefer-await-to-then, github/no-then */
+
+export const listInvitationsSchema = invitationSearchSchema.extend({
+  q: z.string().max(200),
+});
 
 export type InvitationTab = z.infer<typeof invitationSearchSchema>["tab"];
 

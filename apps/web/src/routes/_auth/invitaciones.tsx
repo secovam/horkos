@@ -29,6 +29,7 @@ import {
   MailIcon,
   SearchIcon,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { InvitationAction } from "@/components/invitation-action";
 import { NewInvitationDialog } from "@/components/new-invitation-dialog";
@@ -41,6 +42,8 @@ import {
   invitationStatus,
 } from "@/lib/invitation";
 import type { InvitationTab } from "@/lib/invitation";
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 export const Route = createFileRoute("/_auth/invitaciones")({
   validateSearch: invitationSearchSchema,
@@ -67,10 +70,19 @@ function tableMessage(rowCount: number | undefined, q: string) {
 function InvitationsPage() {
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
+  // The search term stays in component state so employee names and emails never reach the URL.
+  const [q, setQ] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
+
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedQ(q), SEARCH_DEBOUNCE_MS);
+
+    return () => clearTimeout(timeout);
+  }, [q]);
 
   const { data } = useQuery({
-    queryKey: ["invitations", search],
-    queryFn: () => listInvitations({ data: search }),
+    queryKey: ["invitations", search, debouncedQ],
+    queryFn: () => listInvitations({ data: { ...search, q: debouncedQ } }),
     placeholderData: keepPreviousData,
   });
 
@@ -83,7 +95,7 @@ function InvitationsPage() {
 
   const lastShown = Math.min(search.page * INVITATIONS_PAGE_SIZE, total);
   const isActiveTab = search.tab === "active";
-  const emptyMessage = tableMessage(data?.rows.length, search.q);
+  const emptyMessage = tableMessage(data?.rows.length, debouncedQ);
 
   return (
     <>
@@ -135,13 +147,14 @@ function InvitationsPage() {
             type="search"
             aria-label="Filtrar por nombre o correo"
             placeholder="Filtrar por nombre o correo…"
-            value={search.q}
-            onChange={(event) =>
+            value={q}
+            onChange={(event) => {
+              setQ(event.target.value);
               navigate({
-                search: (prev) => ({ ...prev, q: event.target.value, page: 1 }),
+                search: (prev) => ({ ...prev, page: 1 }),
                 replace: true,
-              })
-            }
+              });
+            }}
           />
         </InputGroup>
       </div>

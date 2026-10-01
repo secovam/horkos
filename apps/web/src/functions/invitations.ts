@@ -9,7 +9,7 @@ import {
   escapeLikePattern,
   generateInvitationToken,
   hashInvitationToken,
-  invitationSearchSchema,
+  listInvitationsSchema,
   newInvitationSchema,
 } from "@/lib/invitation";
 import { requireSessionMiddleware } from "@/middleware/auth";
@@ -56,7 +56,7 @@ async function emailInvitation(
 // POST keeps search terms and employee data out of request URLs and logs.
 export const listInvitations = createServerFn({ method: "POST" })
   .middleware([requireSessionMiddleware])
-  .validator(invitationSearchSchema)
+  .validator(listInvitationsSchema)
   .handler(async ({ data: { tab, q, page } }) => {
     const db = getDb();
     const search = searchFilter(q);
