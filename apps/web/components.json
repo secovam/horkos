@@ -16,7 +16,7 @@
     "utils": "@horkos/ui/lib/utils",
     "ui": "@horkos/ui/components",
     "lib": "@/lib",
-    "hooks": "@/hooks"
+    "hooks": "@horkos/ui/hooks"
   },
   "menuColor": "default",
   "menuAccent": "subtle",
