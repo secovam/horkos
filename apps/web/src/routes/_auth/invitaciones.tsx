@@ -27,6 +27,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
+  MailCheckIcon,
   MailIcon,
   MailXIcon,
   SearchIcon,
@@ -54,6 +55,8 @@ export const Route = createFileRoute("/_auth/invitaciones")({
   staticData: { title: "Invitaciones" },
   component: InvitationsPage,
 });
+
+const TAB_ICONS = { active: MailCheckIcon, revoked: MailXIcon } as const;
 
 const dateFormat = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium" });
 
@@ -131,14 +134,21 @@ function InvitationsPage() {
           navigate({ search: (prev) => ({ ...prev, tab, page: 1 }) })
         }
       >
-        <TabsList variant="line">
-          {INVITATION_TABS.map(({ value, label }) => (
-            <TabsTrigger key={value} value={value}>
-              {label}
-              <Badge variant="secondary">{data?.counts[value] ?? 0}</Badge>
-            </TabsTrigger>
-          ))}
-        </TabsList>
+        <div className="border-b">
+          <TabsList variant="line">
+            {INVITATION_TABS.map(({ value, label }) => {
+              const Icon = TAB_ICONS[value];
+
+              return (
+                <TabsTrigger key={value} value={value}>
+                  <Icon data-icon="inline-start" />
+                  {label}
+                  <Badge variant="info">{data?.counts[value] ?? 0}</Badge>
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+        </div>
       </Tabs>
 
       <div className="w-full max-w-sm">
