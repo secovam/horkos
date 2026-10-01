@@ -25,6 +25,7 @@ const ACTIONS = {
     description:
       "Se enviará un enlace nuevo por correo. El enlace anterior dejará de funcionar.",
     variant: "default",
+    triggerVariant: "ghost-primary",
     success: "Invitación reenviada",
     run: resendInvitation,
   },
@@ -35,6 +36,7 @@ const ACTIONS = {
     description:
       "El enlace dejará de funcionar. Podrás enviar una invitación nueva a este correo.",
     variant: "destructive",
+    triggerVariant: "ghost-destructive",
     success: "Invitación revocada",
     run: revokeInvitation,
   },
@@ -53,6 +55,7 @@ export function InvitationAction({
     title,
     description,
     variant,
+    triggerVariant,
     success,
     run,
   } = ACTIONS[action];
@@ -74,7 +77,7 @@ export function InvitationAction({
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger
-        render={<Button variant="ghost" size="icon-sm" />}
+        render={<Button variant={triggerVariant} size="icon-sm" />}
         aria-label={`${label}: ${invitation.employeeName}`}
         title={label}
       >
