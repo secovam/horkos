@@ -9,6 +9,8 @@ export default defineConfig({
   modules: [
     evlog({
       env: { service: "horkos-web" },
+      // Invitation links carry their token in the path.
+      redact: { patterns: [/(?<=\/invitacion\/)[^/?#]+/gu] },
     }),
   ],
 });
