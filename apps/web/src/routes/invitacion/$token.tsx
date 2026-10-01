@@ -1,18 +1,17 @@
 import { Card, CardContent } from "@horkos/ui/components/card";
 import { createFileRoute } from "@tanstack/react-router";
 import { MailCheckIcon, MailXIcon } from "lucide-react";
+import { useEffect, useRef } from "react";
 
-import { openInvitation } from "@/functions/employee-invitation";
+import {
+  checkInvitation,
+  openInvitation,
+} from "@/functions/employee-invitation";
 
 export const Route = createFileRoute("/invitacion/$token")({
-  loader: ({ params }) => openInvitation({ data: { token: params.token } }),
+  loader: ({ params }) => checkInvitation({ data: { token: params.token } }),
   // The URL carries the token, so it must not leak through the Referer header.
-  head: () => ({
-    meta: [
-      { name: "referrer", content: "no-referrer" },
-      { title: "Tu invitación · Horkos" },
-    ],
-  }),
+  head: () => ({ meta: [{ name: "referrer", content: "no-referrer" }] }),
   component: InvitationPage,
 });
 
@@ -33,6 +32,19 @@ const CONTENT = {
 
 function InvitationPage() {
   const { valid } = Route.useLoaderData();
+  const { token } = Route.useParams();
+  const recorded = useRef(false);
+
+  // Recorded from the browser, after hydration, so only a person opening the link counts.
+  useEffect(() => {
+    if (!valid || recorded.current) {
+      return;
+    }
+
+    recorded.current = true;
+    void openInvitation({ data: { token } });
+  }, [valid, token]);
+
   const content = CONTENT[valid ? "valid" : "invalid"];
 
   return (
