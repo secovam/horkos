@@ -11,7 +11,6 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -29,7 +28,8 @@ import {
 
 import { authClient } from "@/lib/auth-client";
 
-const MODULES = [
+const NAV_ITEMS = [
+  { to: "/dashboard", label: "Inicio", icon: HouseIcon },
   { to: "/invitaciones", label: "Invitaciones", icon: MailIcon },
 ] as const;
 
@@ -63,21 +63,7 @@ export function AppSidebar({
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                isActive={pathname === "/dashboard"}
-                render={<Link to="/dashboard" onClick={closeMobile} />}
-              >
-                <HouseIcon />
-                <span>Inicio</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
-        <SidebarGroup>
-          <SidebarGroupLabel>Módulos</SidebarGroupLabel>
-          <SidebarMenu>
-            {MODULES.map((item) => (
+            {NAV_ITEMS.map((item) => (
               <SidebarMenuItem key={item.to}>
                 <SidebarMenuButton
                   isActive={pathname.startsWith(item.to)}
