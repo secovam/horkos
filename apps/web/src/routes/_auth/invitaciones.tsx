@@ -1,13 +1,6 @@
 import { Badge } from "@horkos/ui/components/badge";
 import { Button } from "@horkos/ui/components/button";
 import {
-  Card,
-  CardAction,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@horkos/ui/components/card";
-import {
   Empty,
   EmptyContent,
   EmptyDescription,
@@ -43,6 +36,7 @@ import { useEffect, useState } from "react";
 
 import { InvitationAction } from "@/components/invitation-action";
 import { NewInvitationDialog } from "@/components/new-invitation-dialog";
+import { PageHeader } from "@/components/page-header";
 import { listInvitations } from "@/functions/invitations";
 import {
   INVITATIONS_PAGE_SIZE,
@@ -124,28 +118,12 @@ function InvitationsPage() {
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-4">
-            <div className="bg-muted hidden size-12 shrink-0 items-center justify-center rounded-lg sm:flex">
-              <MailIcon className="size-5" />
-            </div>
-            <div className="grid gap-1">
-              <CardTitle>
-                <h1 className="text-primary text-xl font-semibold">
-                  Invitaciones
-                </h1>
-              </CardTitle>
-              <CardDescription>
-                Invita a empleados a subir sus documentos y completar sus datos
-              </CardDescription>
-            </div>
-          </div>
-          <CardAction>
-            <NewInvitationDialog />
-          </CardAction>
-        </CardHeader>
-      </Card>
+      <PageHeader
+        icon={MailIcon}
+        title="Invitaciones"
+        description="Invita a empleados a subir sus documentos y completar sus datos"
+        actions={<NewInvitationDialog />}
+      />
 
       <Tabs
         value={search.tab}
