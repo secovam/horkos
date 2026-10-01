@@ -45,20 +45,13 @@ export function AppSidebar({
   return (
     <Sidebar variant="inset">
       <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              render={<Link to="/dashboard" onClick={closeMobile} />}
-            >
-              <img
-                src="/logo-secovam.png"
-                alt="Grupo Secovam"
-                className="h-9 w-auto"
-              />
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <Link to="/dashboard" onClick={closeMobile}>
+          <img
+            src="/logo-secovam.png"
+            alt="Grupo Secovam"
+            className="h-auto w-full"
+          />
+        </Link>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
