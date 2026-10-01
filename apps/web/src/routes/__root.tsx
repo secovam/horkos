@@ -9,8 +9,6 @@ import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { createMiddleware } from "@tanstack/react-start";
 import { evlogErrorHandler } from "evlog/nitro/v3";
 
-import Header from "../components/header";
-
 import appCss from "../index.css?url";
 
 export type RouterAppContext = Record<string, never>;
@@ -46,15 +44,12 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 
 function RootDocument() {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
         <HeadContent />
       </head>
       <body>
-        <div className="grid h-svh grid-rows-[auto_1fr]">
-          <Header />
-          <Outlet />
-        </div>
+        <Outlet />
         <Toaster richColors />
         <TanStackRouterDevtools position="bottom-left" />
         <Scripts />

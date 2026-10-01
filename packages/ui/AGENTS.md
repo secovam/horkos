@@ -2,7 +2,7 @@
 
 ## Overview
 
-Shared shadcn components built on Base UI (`@base-ui/react`, style `base-lyra`), not Radix. Apps import them as `@horkos/ui/components/<name>`.
+Shared shadcn components built on Base UI (`@base-ui/react`, style `base-nova`), not Radix. Apps import them as `@horkos/ui/components/<name>`.
 
 ## Key files
 
