@@ -65,6 +65,7 @@ export function AppSidebar({
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
+                isActive={pathname === "/dashboard"}
                 render={<Link to="/dashboard" onClick={closeMobile} />}
               >
                 <HouseIcon />

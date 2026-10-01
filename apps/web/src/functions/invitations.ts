@@ -12,6 +12,7 @@ import {
   listInvitationsSchema,
   newInvitationSchema,
 } from "@/lib/invitation";
+import { countInvitationMetrics } from "@/lib/invitation-metrics";
 import { requireSessionMiddleware } from "@/middleware/auth";
 import { getDb } from "@/services";
 import { sendInvitationEmail } from "@/services/email";
@@ -93,6 +94,10 @@ export const listInvitations = createServerFn({ method: "POST" })
 
     return { rows, counts, total: counts[tab] };
   });
+
+export const getInvitationMetrics = createServerFn({ method: "POST" })
+  .middleware([requireSessionMiddleware])
+  .handler(() => countInvitationMetrics(getDb()));
 
 export const createInvitation = createServerFn({ method: "POST" })
   .middleware([requireSessionMiddleware])
