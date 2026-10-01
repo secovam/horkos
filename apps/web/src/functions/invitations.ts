@@ -133,21 +133,34 @@ export const resendInvitation = createServerFn({ method: "POST" })
   .validator(invitationIdSchema)
   .handler(async ({ data }) => {
     const token = generateInvitationToken();
+    const tokenHash = await hashInvitationToken(token);
 
-    const [updated] = await getDb()
-      .update(invitation)
-      .set({ tokenHash: await hashInvitationToken(token), sentAt: new Date() })
-      .where(and(eq(invitation.id, data.id), isNull(invitation.revokedAt)))
-      .returning({
+    const db = getDb();
+
+    const [active] = await db
+      .select({
         email: invitation.email,
         employeeName: invitation.employeeName,
-      });
+      })
+      .from(invitation)
+      .where(and(eq(invitation.id, data.id), isNull(invitation.revokedAt)));
+
+    if (!active) {
+      throw new Error("Solo se pueden reenviar invitaciones activas.");
+    }
+
+    // ponytail: pending-token state is needed if the new link must work before delivery finishes.
+    await emailInvitation(token, active);
+
+    const [updated] = await db
+      .update(invitation)
+      .set({ tokenHash, sentAt: new Date() })
+      .where(and(eq(invitation.id, data.id), isNull(invitation.revokedAt)))
+      .returning({ id: invitation.id });
 
     if (!updated) {
       throw new Error("Solo se pueden reenviar invitaciones activas.");
     }
-
-    await emailInvitation(token, updated);
   });
 
 export const revokeInvitation = createServerFn({ method: "POST" })

@@ -21,7 +21,7 @@ import {
   TableRow,
 } from "@horkos/ui/components/table";
 import { Tabs, TabsList, TabsTrigger } from "@horkos/ui/components/tabs";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   ChevronLeftIcon,
@@ -83,17 +83,18 @@ function InvitationsPage() {
   const { data } = useQuery({
     queryKey: ["invitations", search, debouncedQ],
     queryFn: () => listInvitations({ data: { ...search, q: debouncedQ } }),
-    placeholderData: keepPreviousData,
   });
 
   const total = data?.total ?? 0;
+  const pageOffset = (search.page - 1) * INVITATIONS_PAGE_SIZE;
+  const pageHasRows = pageOffset < total;
 
-  const firstShown = Math.min(
-    (search.page - 1) * INVITATIONS_PAGE_SIZE + 1,
-    total
-  );
+  const firstShown = pageHasRows ? pageOffset + 1 : 0;
 
-  const lastShown = Math.min(search.page * INVITATIONS_PAGE_SIZE, total);
+  const lastShown = pageHasRows
+    ? Math.min(pageOffset + INVITATIONS_PAGE_SIZE, total)
+    : 0;
+
   const isActiveTab = search.tab === "active";
   const emptyMessage = tableMessage(data?.rows.length, debouncedQ);
 
@@ -147,6 +148,7 @@ function InvitationsPage() {
             type="search"
             aria-label="Filtrar por nombre o correo"
             placeholder="Filtrar por nombre o correo…"
+            maxLength={200}
             value={q}
             onChange={(event) => {
               setQ(event.target.value);
@@ -250,7 +252,7 @@ function InvitationsPage() {
           </Button>
           <Button
             variant="ghost"
-            disabled={lastShown >= total}
+            disabled={!pageHasRows || lastShown >= total}
             onClick={() =>
               navigate({ search: (prev) => ({ ...prev, page: prev.page + 1 }) })
             }

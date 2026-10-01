@@ -50,7 +50,7 @@ export const INVITATION_TABS = [
 
 export const newInvitationSchema = z.object({
   employeeName: z.string().trim().min(1, "Ingresa el nombre del empleado"),
-  email: z.email("Ingresa un correo válido").trim().toLowerCase(),
+  email: z.string().trim().email("Ingresa un correo válido").toLowerCase(),
 });
 
 const TOKEN_BYTES = 32;
