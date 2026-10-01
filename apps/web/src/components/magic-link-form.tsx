@@ -15,7 +15,7 @@ export default function MagicLinkForm() {
     defaultValues: { email: "" },
     onSubmit: async ({ value }) => {
       await authClient.signIn.magicLink(
-        { email: value.email, callbackURL: "/dashboard" },
+        { email: value.email.trim().toLowerCase(), callbackURL: "/dashboard" },
         {
           onSuccess: () => setEmailSent(true),
           onError: (error) => {
