@@ -2,6 +2,7 @@ import { drizzleAdapter } from "@better-auth/drizzle-adapter/relations-v2";
 import type { Database } from "@horkos/db";
 import * as schema from "@horkos/db/schema/auth";
 import { betterAuth } from "better-auth";
+import { createAuthMiddleware } from "better-auth/api";
 import { magicLink } from "better-auth/plugins";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
 
@@ -43,20 +44,29 @@ export function createAuth(
         }
       },
     },
+    hooks: {
+      // Unknown addresses get the same response as known ones, but must not
+      // reach the plugin, which stores a verification row before sending.
+      before: createAuthMiddleware(async (ctx) => {
+        if (ctx.path !== "/sign-in/magic-link") {
+          return;
+        }
+
+        const existingUser = await database.query.user.findFirst({
+          columns: { id: true },
+          where: { email: String(ctx.body?.email).toLowerCase() },
+        });
+
+        if (!existingUser) {
+          return ctx.json({ status: true });
+        }
+      }),
+    },
     plugins: [
       magicLink({
         disableSignUp: true,
         storeToken: "hashed",
-        sendMagicLink: async ({ email, url }) => {
-          const existingUser = await database.query.user.findFirst({
-            columns: { id: true },
-            where: { email: email.toLowerCase() },
-          });
-
-          if (existingUser) {
-            await sendMagicLink({ email, url });
-          }
-        },
+        sendMagicLink: ({ email, url }) => sendMagicLink({ email, url }),
       }),
       tanstackStartCookies(),
     ],
