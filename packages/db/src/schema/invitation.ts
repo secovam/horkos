@@ -34,9 +34,8 @@ export const invitation = sqliteTable(
     }),
   },
   (table) => [
-    uniqueIndex("invitation_active_email_idx")
-      .on(table.email)
-      .where(sql`revoked_at is null`),
+    // One invitation per email for life: a revoked one is reactivated, never replaced.
+    uniqueIndex("invitation_email_idx").on(table.email),
     index("invitation_created_at_idx").on(table.createdAt),
   ]
 );

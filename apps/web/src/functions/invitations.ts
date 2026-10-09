@@ -105,12 +105,18 @@ export const createInvitation = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const db = getDb();
 
-    const active = await db.query.invitation.findFirst({
-      columns: { id: true },
-      where: { email: data.email, revokedAt: { isNull: true } },
+    const existing = await db.query.invitation.findFirst({
+      columns: { revokedAt: true },
+      where: { email: data.email },
     });
 
-    if (active) {
+    if (existing?.revokedAt) {
+      throw new Error(
+        "Este correo tiene una invitación revocada. Reactívala desde la pestaña Revocadas."
+      );
+    }
+
+    if (existing) {
       throw new Error("Ya existe una invitación activa para este correo.");
     }
 
@@ -203,15 +209,6 @@ export const reactivateInvitation = createServerFn({ method: "POST" })
 
     if (!revoked) {
       throw new Error("La invitación ya estaba activa.");
-    }
-
-    const active = await db.query.invitation.findFirst({
-      columns: { id: true },
-      where: { email: revoked.email, revokedAt: { isNull: true } },
-    });
-
-    if (active) {
-      throw new Error("Ya existe una invitación activa para este correo.");
     }
 
     // The revoked link may have leaked, so reactivating always issues a new one.
