@@ -185,6 +185,68 @@ export const resendInvitation = createServerFn({ method: "POST" })
     }
   });
 
+export const reactivateInvitation = createServerFn({ method: "POST" })
+  .middleware([requireSessionMiddleware])
+  .validator(invitationIdSchema)
+  .handler(async ({ data }) => {
+    const db = getDb();
+
+    const [revoked] = await db
+      .select({
+        email: invitation.email,
+        employeeName: invitation.employeeName,
+        revokedAt: invitation.revokedAt,
+        sentAt: invitation.sentAt,
+      })
+      .from(invitation)
+      .where(and(eq(invitation.id, data.id), isNotNull(invitation.revokedAt)));
+
+    if (!revoked) {
+      throw new Error("La invitación ya estaba activa.");
+    }
+
+    const active = await db.query.invitation.findFirst({
+      columns: { id: true },
+      where: { email: revoked.email, revokedAt: { isNull: true } },
+    });
+
+    if (active) {
+      throw new Error("Ya existe una invitación activa para este correo.");
+    }
+
+    // The revoked link may have leaked, so reactivating always issues a new one.
+    const token = generateInvitationToken();
+    const tokenHash = await hashInvitationToken(token);
+
+    const [reactivated] = await db
+      .update(invitation)
+      .set({ revokedAt: null, tokenHash, sentAt: new Date() })
+      .where(and(eq(invitation.id, data.id), isNotNull(invitation.revokedAt)))
+      .returning({ id: invitation.id });
+
+    if (!reactivated) {
+      throw new Error(
+        "La invitación cambió mientras se reactivaba. Intenta de nuevo."
+      );
+    }
+
+    try {
+      await emailInvitation(token, revoked);
+    } catch {
+      // Revoke again so the employee never holds a live link nobody sent them.
+      await db
+        .update(invitation)
+        .set({ revokedAt: revoked.revokedAt, sentAt: revoked.sentAt })
+        .where(
+          and(eq(invitation.id, data.id), eq(invitation.tokenHash, tokenHash))
+        );
+
+      throw new Error(
+        "No se pudo enviar el correo, así que la invitación sigue revocada."
+      );
+    }
+  });
+
 export const revokeInvitation = createServerFn({ method: "POST" })
   .middleware([requireSessionMiddleware])
   .validator(invitationIdSchema)

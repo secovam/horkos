@@ -96,18 +96,25 @@ export function InvitationsTable(props: InvitationsTableProps) {
                   </span>
                 </TableCell>
                 <TableCell>
-                  {!invitation.revokedAt && (
-                    <div className="flex justify-end gap-1">
+                  <div className="flex justify-end gap-1">
+                    {invitation.revokedAt ? (
                       <InvitationAction
-                        action="resend"
+                        action="reactivate"
                         invitation={invitation}
                       />
-                      <InvitationAction
-                        action="revoke"
-                        invitation={invitation}
-                      />
-                    </div>
-                  )}
+                    ) : (
+                      <>
+                        <InvitationAction
+                          action="resend"
+                          invitation={invitation}
+                        />
+                        <InvitationAction
+                          action="revoke"
+                          invitation={invitation}
+                        />
+                      </>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             );

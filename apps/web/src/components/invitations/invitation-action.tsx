@@ -12,10 +12,14 @@ import {
 import { Button } from "@horkos/ui/components/button";
 import { toast } from "@horkos/ui/components/toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { BanIcon, SendIcon } from "lucide-react";
+import { BanIcon, RotateCcwIcon, SendIcon } from "lucide-react";
 import { useState } from "react";
 
-import { resendInvitation, revokeInvitation } from "@/functions/invitations";
+import {
+  reactivateInvitation,
+  resendInvitation,
+  revokeInvitation,
+} from "@/functions/invitations";
 
 const ACTIONS = {
   resend: {
@@ -41,6 +45,18 @@ const ACTIONS = {
     success: "Invitación revocada",
     successDescription: "Se revocó la invitación de",
     run: revokeInvitation,
+  },
+  reactivate: {
+    icon: RotateCcwIcon,
+    label: "Reactivar",
+    title: "¿Reactivar la invitación?",
+    description:
+      "Se enviará un enlace nuevo por correo. El enlace anterior seguirá sin funcionar.",
+    variant: "default",
+    triggerVariant: "ghost-primary",
+    success: "Invitación reactivada",
+    successDescription: "Se reactivó la invitación de",
+    run: reactivateInvitation,
   },
 } as const;
 
