@@ -1,4 +1,4 @@
-import { Toaster } from "@horkos/ui/components/sonner";
+import { Toaster } from "@horkos/ui/components/toast";
 import {
   HeadContent,
   Outlet,
@@ -28,7 +28,7 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
         content: "width=device-width, initial-scale=1",
       },
       {
-        title: "My App",
+        title: "Grupo Secovam",
       },
     ],
     links: [
@@ -44,13 +44,13 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
 
 function RootDocument() {
   return (
-    <html lang="en">
+    <html lang="es">
       <head>
         <HeadContent />
       </head>
       <body>
         <Outlet />
-        <Toaster richColors />
+        <Toaster />
         <TanStackRouterDevtools position="bottom-left" />
         <Scripts />
       </body>

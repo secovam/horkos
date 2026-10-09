@@ -2,9 +2,9 @@ import { Button } from "@horkos/ui/components/button";
 import { Card, CardContent } from "@horkos/ui/components/card";
 import { Input } from "@horkos/ui/components/input";
 import { Label } from "@horkos/ui/components/label";
+import { toast } from "@horkos/ui/components/toast";
 import { useForm } from "@tanstack/react-form";
 import { useState } from "react";
-import { toast } from "sonner";
 import { z } from "zod";
 
 import { authClient } from "@/lib/auth-client";
