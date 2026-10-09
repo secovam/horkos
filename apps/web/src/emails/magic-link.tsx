@@ -1,47 +1,20 @@
-import {
-  Body,
-  Button,
-  Container,
-  Head,
-  Heading,
-  Html,
-  Preview,
-  Text,
-} from "react-email";
+import { EmailLayout, EmailText } from "@/emails/email-layout";
 
-/* oxlint-disable shadcn/no-inline-styles -- Email clients require inline styles. */
 export function MagicLinkEmail({ url }: { url: string }) {
   return (
-    <Html lang="es">
-      <Head />
-      <Preview>Tu enlace para ingresar a Horkos</Preview>
-      <Body
-        style={{ backgroundColor: "#f5f5f5", fontFamily: "Arial, sans-serif" }}
-      >
-        <Container
-          style={{
-            margin: "32px auto",
-            padding: 24,
-            backgroundColor: "#ffffff",
-          }}
-        >
-          <Heading style={{ fontSize: 24 }}>Ingresa a Horkos</Heading>
-          <Text>
-            Usa este enlace para iniciar sesión. Solo se puede usar una vez.
-          </Text>
-          <Button
-            href={url}
-            style={{
-              backgroundColor: "#111827",
-              color: "#ffffff",
-              padding: "12px 20px",
-            }}
-          >
-            Iniciar sesión
-          </Button>
-          <Text>Si no solicitaste este correo, puedes ignorarlo.</Text>
-        </Container>
-      </Body>
-    </Html>
+    <EmailLayout
+      actionLabel="Iniciar sesión"
+      greeting="¡Hola!"
+      notice="Si no solicitaste este correo, puedes ignorarlo de forma segura. Tu cuenta sigue protegida."
+      preview="Tu enlace para ingresar a Horkos"
+      url={url}
+    >
+      <EmailText>
+        Recibiste este enlace porque solicitaste ingresar a tu cuenta en Horkos.
+      </EmailText>
+      <EmailText>
+        Este enlace es seguro y <strong>solo se puede usar una vez</strong>.
+      </EmailText>
+    </EmailLayout>
   );
 }
