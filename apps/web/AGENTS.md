@@ -26,7 +26,7 @@ TanStack Start app (React 19, TanStack Router, Query, Form) built with Vite and 
 - Server logic lives in `createServerFn` handlers under `src/functions/`; protect them with `authMiddleware`.
 - Get db and auth through `src/services.ts`, never by calling the package factories directly.
 - Protected pages go under `src/routes/_auth/`.
-- Forms use `@tanstack/react-form` with Zod schemas; toasts use `sonner`.
+- Forms use `@tanstack/react-form` with Zod schemas; toasts use `toast` from `@horkos/ui/components/toast` (goey-toast).
 
 ## Gotchas
 

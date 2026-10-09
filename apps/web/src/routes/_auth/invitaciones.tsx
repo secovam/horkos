@@ -1,28 +1,12 @@
 import { Badge } from "@horkos/ui/components/badge";
 import { Button } from "@horkos/ui/components/button";
 import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@horkos/ui/components/empty";
-import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
 } from "@horkos/ui/components/input-group";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@horkos/ui/components/table";
 import { Tabs, TabsList, TabsTrigger } from "@horkos/ui/components/tabs";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   ChevronLeftIcon,
@@ -31,20 +15,17 @@ import {
   MailIcon,
   MailXIcon,
   SearchIcon,
-  SearchXIcon,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { InvitationAction } from "@/components/invitation-action";
-import { NewInvitationDialog } from "@/components/new-invitation-dialog";
-import { PageHeader } from "@/components/page-header";
+import { InvitationsTable } from "@/components/invitations/invitations-table";
+import { NewInvitationDialog } from "@/components/invitations/new-invitation-dialog";
+import { PageHeader } from "@/components/layout/page-header";
 import { listInvitations } from "@/functions/invitations";
 import {
   INVITATIONS_PAGE_SIZE,
-  INVITATION_STATUS,
   INVITATION_TABS,
   invitationSearchSchema,
-  invitationStatus,
 } from "@/lib/invitation";
 import type { InvitationTab } from "@/lib/invitation";
 
@@ -58,31 +39,16 @@ export const Route = createFileRoute("/_auth/invitaciones")({
 
 const TAB_ICONS = { active: MailCheckIcon, revoked: MailXIcon } as const;
 
-const dateFormat = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium" });
+function pageRange(page: number, total: number) {
+  const offset = (page - 1) * INVITATIONS_PAGE_SIZE;
 
-function emptyState(tab: InvitationTab, q: string) {
-  if (q) {
-    return {
-      icon: <SearchXIcon />,
-      title: "Sin resultados",
-      description: "Ninguna invitación coincide con la búsqueda.",
-    };
-  }
-
-  if (tab === "revoked") {
-    return {
-      icon: <MailXIcon />,
-      title: "No hay invitaciones revocadas",
-      description: "Las invitaciones que revoques aparecerán aquí.",
-    };
+  if (offset >= total) {
+    return { first: 0, last: 0 };
   }
 
   return {
-    icon: <MailIcon />,
-    title: "Aún no hay invitaciones",
-    description:
-      "Invita a un empleado para que suba sus documentos y complete sus datos.",
-    action: <NewInvitationDialog />,
+    first: offset + 1,
+    last: Math.min(offset + INVITATIONS_PAGE_SIZE, total),
   };
 }
 
@@ -99,25 +65,14 @@ function InvitationsPage() {
     return () => clearTimeout(timeout);
   }, [q]);
 
-  const { data } = useQuery({
+  const { data, isError, refetch } = useQuery({
     queryKey: ["invitations", search, debouncedQ],
     queryFn: () => listInvitations({ data: { ...search, q: debouncedQ } }),
+    placeholderData: keepPreviousData,
   });
 
   const total = data?.total ?? 0;
-  const pageOffset = (search.page - 1) * INVITATIONS_PAGE_SIZE;
-  const pageHasRows = pageOffset < total;
-
-  const firstShown = pageHasRows ? pageOffset + 1 : 0;
-
-  const lastShown = pageHasRows
-    ? Math.min(pageOffset + INVITATIONS_PAGE_SIZE, total)
-    : 0;
-
-  const isActiveTab = search.tab === "active";
-
-  const empty =
-    data?.rows.length === 0 ? emptyState(search.tab, debouncedQ) : null;
+  const { first: firstShown, last: lastShown } = pageRange(search.page, total);
 
   return (
     <>
@@ -173,90 +128,13 @@ function InvitationsPage() {
         </InputGroup>
       </div>
 
-      <div className="overflow-hidden rounded-xl border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Empleado</TableHead>
-              <TableHead>Correo</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Último envío</TableHead>
-              <TableHead>
-                <span className="sr-only">Acciones</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data?.rows.map((invitation) => {
-              const status = INVITATION_STATUS[invitationStatus(invitation)];
-
-              return (
-                <TableRow key={invitation.id}>
-                  <TableCell>
-                    <span className="font-medium">
-                      {invitation.employeeName}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-muted-foreground">
-                      {invitation.email}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={status.variant}>{status.label}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-muted-foreground">
-                      {dateFormat.format(invitation.sentAt)}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    {isActiveTab ? (
-                      <div className="flex justify-end gap-1">
-                        <InvitationAction
-                          action="resend"
-                          invitation={invitation}
-                        />
-                        <InvitationAction
-                          action="revoke"
-                          invitation={invitation}
-                        />
-                      </div>
-                    ) : null}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-            {data ? null : (
-              <TableRow>
-                <TableCell colSpan={5}>
-                  <p className="text-muted-foreground py-8 text-center">
-                    Cargando…
-                  </p>
-                </TableCell>
-              </TableRow>
-            )}
-            {empty ? (
-              <TableRow>
-                <TableCell colSpan={5}>
-                  <div className="whitespace-normal">
-                    <Empty>
-                      <EmptyHeader>
-                        <EmptyMedia variant="icon">{empty.icon}</EmptyMedia>
-                        <EmptyTitle>{empty.title}</EmptyTitle>
-                        <EmptyDescription>{empty.description}</EmptyDescription>
-                      </EmptyHeader>
-                      {"action" in empty ? (
-                        <EmptyContent>{empty.action}</EmptyContent>
-                      ) : null}
-                    </Empty>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : null}
-          </TableBody>
-        </Table>
-      </div>
+      <InvitationsTable
+        rows={data?.rows}
+        isError={isError}
+        tab={search.tab}
+        q={debouncedQ}
+        onRetry={() => refetch()}
+      />
 
       <nav
         aria-label="Paginación"
@@ -282,7 +160,7 @@ function InvitationsPage() {
           </Button>
           <Button
             variant="ghost"
-            disabled={!pageHasRows || lastShown >= total}
+            disabled={firstShown === 0 || lastShown >= total}
             onClick={() =>
               navigate({ search: (prev) => ({ ...prev, page: prev.page + 1 }) })
             }

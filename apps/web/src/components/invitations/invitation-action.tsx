@@ -17,12 +17,6 @@ import { useState } from "react";
 
 import { resendInvitation, revokeInvitation } from "@/functions/invitations";
 
-interface Invitation {
-  id: string;
-  employeeName: string;
-  email: string;
-}
-
 const ACTIONS = {
   resend: {
     icon: SendIcon,
@@ -33,8 +27,7 @@ const ACTIONS = {
     variant: "default",
     triggerVariant: "ghost-primary",
     success: "Invitación reenviada",
-    successDescription: ({ employeeName, email }: Invitation) =>
-      `Se reenvió la invitación a ${employeeName} (${email})`,
+    successDescription: "Se reenvió la invitación a",
     run: resendInvitation,
   },
   revoke: {
@@ -46,8 +39,7 @@ const ACTIONS = {
     variant: "destructive",
     triggerVariant: "ghost-destructive",
     success: "Invitación revocada",
-    successDescription: ({ employeeName, email }: Invitation) =>
-      `Se revocó la invitación de ${employeeName} (${email})`,
+    successDescription: "Se revocó la invitación de",
     run: revokeInvitation,
   },
 } as const;
@@ -57,28 +49,17 @@ export function InvitationAction({
   invitation,
 }: {
   action: keyof typeof ACTIONS;
-  invitation: Invitation;
+  invitation: { id: string; employeeName: string; email: string };
 }) {
-  const {
-    icon: Icon,
-    label,
-    title,
-    description,
-    variant,
-    triggerVariant,
-    success,
-    successDescription,
-    run,
-  } = ACTIONS[action];
-
+  const config = ACTIONS[action];
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: () => run({ data: { id: invitation.id } }),
+    mutationFn: () => config.run({ data: { id: invitation.id } }),
     onSuccess: () => {
-      toast.success(success, {
-        description: successDescription(invitation),
+      toast.success(config.success, {
+        description: `${config.successDescription} ${invitation.employeeName} (${invitation.email})`,
       });
       setOpen(false);
     },
@@ -90,25 +71,25 @@ export function InvitationAction({
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogTrigger
-        render={<Button variant={triggerVariant} size="icon-sm" />}
-        aria-label={`${label}: ${invitation.employeeName}`}
-        title={label}
+        render={<Button variant={config.triggerVariant} size="icon-sm" />}
+        aria-label={`${config.label}: ${invitation.employeeName}`}
+        title={config.label}
       >
-        <Icon />
+        <config.icon />
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
+          <AlertDialogTitle>{config.title}</AlertDialogTitle>
+          <AlertDialogDescription>{config.description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancelar</AlertDialogCancel>
           <AlertDialogAction
-            variant={variant}
+            variant={config.variant}
             disabled={mutation.isPending}
             onClick={() => mutation.mutate()}
           >
-            {label}
+            {config.label}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

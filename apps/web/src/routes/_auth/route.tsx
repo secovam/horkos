@@ -20,7 +20,7 @@ import {
   useMatches,
 } from "@tanstack/react-router";
 
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppSidebar } from "@/components/layout/app-sidebar";
 import { getUser } from "@/functions/get-user";
 
 export const Route = createFileRoute("/_auth")({

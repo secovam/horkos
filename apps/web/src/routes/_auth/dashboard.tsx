@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { HouseIcon } from "lucide-react";
 
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/layout/page-header";
 import { getInvitationMetrics } from "@/functions/invitations";
 import { INVITATION_METRICS } from "@/lib/invitation-metrics";
 
