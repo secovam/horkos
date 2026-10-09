@@ -212,6 +212,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: ^5.20260906.1
         version: 5.20260927.1
+      '@coderabbitai/config':
+        specifier: 1.1.1
+        version: 1.1.1
       '@horkos/config':
         specifier: workspace:*
         version: link:packages/config
@@ -930,6 +933,9 @@ packages:
 
   '@cloudflare/workers-types@5.20260927.1':
     resolution: {integrity: sha512-7/L0y4Pb8ig/8QSQW4/g4WbGyPYKniw+uC03nkN7VMvawHTWEuqeoVCKi9nOHKiya434eeEUaic2o0+vJhKjYw==}
+
+  '@coderabbitai/config@1.1.1':
+    resolution: {integrity: sha512-7VIgMexKKSzvEosbjj31U1t4RF45l49mpCnz08qFyH9STsFhzGchyIAFoN2YtwpnvL/e6BH3Nv43xbXx8SMkDQ==}
 
   '@csstools/color-helpers@6.1.2':
     resolution: {integrity: sha512-grhRy3OKmniaAEKXMjua5z/EODX0MSqBGjunw8+j/3HQjOnahs2AGhvEOIYVUWcU6ScApbhLhVrQTX8XqrMrow==}
@@ -7224,6 +7230,10 @@ snapshots:
     optional: true
 
   '@cloudflare/workers-types@5.20260927.1': {}
+
+  '@coderabbitai/config@1.1.1':
+    dependencies:
+      zod: 4.6.5
 
   '@csstools/color-helpers@6.1.2': {}
 
