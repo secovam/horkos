@@ -92,7 +92,9 @@ export function InvitationsTable(props: InvitationsTableProps) {
                 </TableCell>
                 <TableCell>
                   <span className="text-muted-foreground">
-                    {dateFormat.format(invitation.sentAt)}
+                    {invitation.sentAt
+                      ? dateFormat.format(invitation.sentAt)
+                      : "—"}
                   </span>
                 </TableCell>
                 <TableCell>
