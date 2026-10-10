@@ -48,6 +48,8 @@ lerna-debug.log*
 .vercel
 
 # Testing
+test-results
+playwright-report
 coverage
 .nyc_output
 
