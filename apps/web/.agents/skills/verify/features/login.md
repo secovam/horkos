@@ -1,35 +1,26 @@
 # HR login
 
-HR requests a magic link by email, opens it to access protected pages, and signs out from the user menu.
+HR requests an email magic link, opens it, and signs out.
 
 ## Sub-features
 
-- `login-guard` redirects anonymous visitors from both protected routes.
-- `login-validation` rejects missing or malformed email.
-- `login-known` emails an existing HR account and establishes a session.
-- `login-unknown` gives the same confirmation without mail or a verification row.
-- `login-logout` ends the session and restores the guard.
+- `login-guard`: anonymous protected routes redirect to login.
+- `login-known`: uppercase email resolves to the fictional HR account and opens dashboard.
+- `login-unknown`: same confirmation with no mail, verification row or session.
+- `login-logout`: user menu ends the real auth session.
 
 ## How to get to it (user POV)
 
-- Open `/login` directly.
-- Open `/dashboard` or `/invitaciones` without a session.
-- Open the link received by email.
-- Choose `Menú de usuario` → `Cerrar sesión` from either protected page.
+Open `/login` or a protected `/dashboard` or `/invitaciones` route. Open the emailed magic link. From an authenticated page choose `Menú de usuario` → `Cerrar sesión`.
 
-## Driving it with T3 preview
+## Driving it with Playwright
 
-Preconditions: healthy owned instance, fresh tab, and the fictional local HR fixture from the skill. Record matching email paths, verification-row IDs, and mail counts without reading existing messages.
+```sh
+pnpm --filter web exec playwright test auth.spec.ts
+```
 
-- **Guard.** `preview_navigate({tabId,url:"http://localhost:3101/dashboard"})`, then `preview_wait_for({tabId,urlIncludes:"/login",text:"Enviar enlace"})`. Repeat for `/invitaciones`.
-- **Validation.** Click `role=button[name='Enviar enlace']` with an empty field, then type `invalid` into `#email` and click again. The form must remain without success confirmation or email side effects. Native email validation may prevent the request before Spanish Zod text appears.
-- **Unknown address.** Type `unknown-$VERIFY_RUN@example.com` into `#email` using `preview_type` with `clear:true`; click `role=button[name='Enviar enlace']`. Wait for `Hemos enviado un enlace mágico`. Read-only `SELECT count(*) FROM verification;` and the local mail file count must remain unchanged from immediately before the action.
-- **Known account.** Navigate back to `/login`, type the resolved `$VERIFY_HR_EMAIL`, and click `Enviar enlace`. Wait for the same confirmation. Require a new local email capture for this address and a new verification row. Open its magic link with `preview_navigate`; require `/dashboard` and heading `Inicio`. Read-only `SELECT count(*) FROM session WHERE user_id='$VERIFY_HR_ID';` must show a session. The link is the genuine auth entry point, not a seeded cookie.
-- **Logout.** Click `role=button[name='Menú de usuario']`, then `role=menuitem[name='Cerrar sesión']`. Require `/login`; revisit both protected routes and require redirects. Confirm the fixture's session count returns to zero.
+The known-account test opens `/dashboard`, requires `/login`, fills `Correo electrónico`, clicks `Enviar enlace`, reads the captured recipient and magic link, requires dashboard, then uses the user menu to log out. Unknown-account coverage opens the canonical `/invitaciones?tab=active&page=1` route anonymously and checks the confirmation and zero mail/verification/session rows. Keep native empty/malformed email rejection as an additional manual case when changing validation.
 
 ## Gotchas
 
-- Magic links replace passwords; sign-up is disabled. The seed file's named account is not a fictional test fixture.
-- The form trims and lowercases email. If testing normalization, compare the captured recipient to the fixture email.
-- Both known and unknown addresses show success. The screen alone cannot prove email was sent.
-- Local captures contain usable tokens. Keep them local, consume the link, and redact token-bearing URLs from evidence.
+No sign-up or password login exists. A success screen alone does not prove mail delivery or a session. Keep tokens local; never seed a session to bypass authentication. Known limitation: direct canonical invitation navigation proves its guard. In this local Worker build, bare `/invitaciones` adds defaults with a 307 redirect and its follow-up request can hang; this entry is not covered by the passing guard test. Diagnose that normalization redirect separately before claiming bare-route coverage.
