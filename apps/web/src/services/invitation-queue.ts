@@ -1,5 +1,5 @@
 import { invitation } from "@horkos/db/schema/invitation";
-import { and, asc, eq, inArray, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lt, or } from "drizzle-orm";
 import { z } from "zod";
 
 import { ENV } from "@/env.server";
@@ -8,6 +8,11 @@ import { getDb } from "@/services";
 import { deliverInvitation } from "@/services/invitation-delivery";
 
 const ENQUEUE_LIMIT = 100;
+
+// Far past a message's whole retry chain (5 retries, 60 s apart), so a claim this old lost its
+// message: the Worker died before sendBatch or the queue gave up. A duplicate is harmless, since
+// only one message can win the claim in sendQueuedInvitation.
+const STALE_CLAIM_MS = 60 * 60 * 1000;
 
 // D1 caps bound parameters per statement at 100.
 const RESET_CHUNK = 50;
@@ -25,15 +30,16 @@ function chunk<T>(items: T[], size: number) {
 export async function enqueuePendingInvitations() {
   const db = getDb();
 
+  const unclaimed = or(
+    isNull(invitation.enqueuedAt),
+    lt(invitation.enqueuedAt, new Date(Date.now() - STALE_CLAIM_MS))
+  );
+
   const oldestUnsent = db
     .select({ id: invitation.id })
     .from(invitation)
     .where(
-      and(
-        isNull(invitation.sentAt),
-        isNull(invitation.enqueuedAt),
-        isNull(invitation.revokedAt)
-      )
+      and(isNull(invitation.sentAt), unclaimed, isNull(invitation.revokedAt))
     )
     .orderBy(asc(invitation.createdAt))
     .limit(ENQUEUE_LIMIT);
@@ -42,9 +48,7 @@ export async function enqueuePendingInvitations() {
   const claimed = await db
     .update(invitation)
     .set({ enqueuedAt: new Date() })
-    .where(
-      and(inArray(invitation.id, oldestUnsent), isNull(invitation.enqueuedAt))
-    )
+    .where(and(inArray(invitation.id, oldestUnsent), unclaimed))
     .returning({ id: invitation.id });
 
   if (claimed.length === 0) {

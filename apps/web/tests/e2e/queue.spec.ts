@@ -167,3 +167,31 @@ test("HR can send a queued invitation right away", async ({ app, page }) => {
   await page.waitForTimeout(1500);
   expect(await mailCounts(app)).toStrictEqual(EMAILED_ONCE);
 });
+
+test("the cron re-enqueues invitations whose queue message was lost", async ({
+  app,
+  page,
+}) => {
+  await seedQueued(app);
+  // Ana's claim is ancient with no message behind it; Beto's is fresh and may still be in flight.
+  await app.db.batch([
+    app.db
+      .prepare("UPDATE invitation SET enqueued_at = 1 WHERE id = ?")
+      .bind("queued-1"),
+    app.db
+      .prepare("UPDATE invitation SET enqueued_at = ? WHERE id = ?")
+      .bind(Date.now(), "queued-2"),
+  ]);
+
+  await app.runScheduled();
+
+  await expect
+    .poll(() => mailCounts(app))
+    .toStrictEqual({
+      ...EMAILED_ONCE,
+      "queued.beto@example.com": 0,
+    });
+  // oxlint-disable-next-line sonarjs/no-fixed-wait-in-tests -- Absence of another email has no event to wait on.
+  await page.waitForTimeout(1500);
+  expect(await mailCounts(app)).toMatchObject({ "queued.beto@example.com": 0 });
+});
