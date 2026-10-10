@@ -96,7 +96,7 @@ test("queued invitations are enqueued by the cron and emailed exactly once", asy
   expect(
     await count(
       app,
-      "sent_at IS NOT NULL AND token_hash IS NOT NULL AND enqueued_at IS NOT NULL"
+      "sent_at IS NOT NULL AND token_hash IS NOT NULL AND enqueued_at IS NULL"
     )
   ).toBe(3);
   expect(
@@ -194,4 +194,30 @@ test("the cron re-enqueues invitations whose queue message was lost", async ({
   // oxlint-disable-next-line sonarjs/no-fixed-wait-in-tests -- Absence of another email has no event to wait on.
   await page.waitForTimeout(1500);
   expect(await mailCounts(app)).toMatchObject({ "queued.beto@example.com": 0 });
+});
+
+test("the queue retries a send whose rollback also failed", async ({
+  app,
+  page,
+}) => {
+  await seedQueued(app);
+  // What a failed delivery leaves when its rollback fails too: a hash and sent_at nobody emailed.
+  await app.db
+    .prepare(
+      "UPDATE invitation SET token_hash = 'unsent-hash', sent_at = 1, enqueued_at = 1 WHERE id = ?"
+    )
+    .bind("queued-1")
+    .run();
+
+  await app.runScheduled();
+
+  await expect.poll(() => mailCounts(app)).toStrictEqual(EMAILED_ONCE);
+  expect(
+    await count(app, "token_hash = 'unsent-hash' OR enqueued_at IS NOT NULL")
+  ).toBe(0);
+
+  await app.runScheduled();
+  // oxlint-disable-next-line sonarjs/no-fixed-wait-in-tests -- Absence of another email has no event to wait on.
+  await page.waitForTimeout(1500);
+  expect(await mailCounts(app)).toStrictEqual(EMAILED_ONCE);
 });

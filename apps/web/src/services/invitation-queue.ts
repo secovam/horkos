@@ -1,5 +1,5 @@
 import { invitation } from "@horkos/db/schema/invitation";
-import { and, asc, eq, inArray, isNull, lt, or } from "drizzle-orm";
+import { and, asc, eq, inArray, isNotNull, isNull, lt, or } from "drizzle-orm";
 import { z } from "zod";
 
 import { ENV } from "@/env.server";
@@ -9,9 +9,10 @@ import { deliverInvitation } from "@/services/invitation-delivery";
 
 const ENQUEUE_LIMIT = 100;
 
-// Far past a message's whole retry chain (5 retries, 60 s apart), so a claim this old lost its
-// message: the Worker died before sendBatch or the queue gave up. A duplicate is harmless, since
-// only one message can win the claim in sendQueuedInvitation.
+// enqueued_at means the queue owns the row until an email is confirmed sent, then it is cleared.
+// This is far past a message's whole retry chain (5 retries, 60 s apart), so a row owned this long
+// lost its message: the Worker died before sendBatch or the queue gave up. A duplicate is
+// harmless, since the first message to confirm a send releases the row for the rest.
 const STALE_CLAIM_MS = 60 * 60 * 1000;
 
 // D1 caps bound parameters per statement at 100.
@@ -31,16 +32,14 @@ export async function enqueuePendingInvitations() {
   const db = getDb();
 
   const unclaimed = or(
-    isNull(invitation.enqueuedAt),
+    and(isNull(invitation.sentAt), isNull(invitation.enqueuedAt)),
     lt(invitation.enqueuedAt, new Date(Date.now() - STALE_CLAIM_MS))
   );
 
-  const oldestUnsent = db
+  const oldestPending = db
     .select({ id: invitation.id })
     .from(invitation)
-    .where(
-      and(isNull(invitation.sentAt), unclaimed, isNull(invitation.revokedAt))
-    )
+    .where(and(unclaimed, isNull(invitation.revokedAt)))
     .orderBy(asc(invitation.createdAt))
     .limit(ENQUEUE_LIMIT);
 
@@ -48,7 +47,7 @@ export async function enqueuePendingInvitations() {
   const claimed = await db
     .update(invitation)
     .set({ enqueuedAt: new Date() })
-    .where(and(inArray(invitation.id, oldestUnsent), unclaimed))
+    .where(and(inArray(invitation.id, oldestPending), unclaimed))
     .returning({ id: invitation.id });
 
   if (claimed.length === 0) {
@@ -82,14 +81,15 @@ async function sendQueuedInvitation(invitationId: string) {
   const token = generateInvitationToken();
   const tokenHash = await hashInvitationToken(token);
 
-  // The null hash is the claim: a resend from the dashboard or a duplicate message loses here.
+  // A hash left by a send that failed and could not roll back is reclaimed here, since the queue
+  // still owns the row. A send from the dashboard releases it, so that message loses.
   const [claimed] = await db
     .update(invitation)
     .set({ tokenHash, sentAt: new Date() })
     .where(
       and(
         eq(invitation.id, invitationId),
-        isNull(invitation.tokenHash),
+        isNotNull(invitation.enqueuedAt),
         isNull(invitation.revokedAt)
       )
     )
@@ -105,6 +105,7 @@ async function sendQueuedInvitation(invitationId: string) {
   try {
     await deliverInvitation(token, claimed);
   } catch (error) {
+    // Best effort, so the dashboard shows it queued again; the retry reclaims it either way.
     await db
       .update(invitation)
       .set({ tokenHash: null, sentAt: null })
@@ -117,6 +118,14 @@ async function sendQueuedInvitation(invitationId: string) {
 
     throw error;
   }
+
+  // If this fails the retry sends again: a second email beats none.
+  await db
+    .update(invitation)
+    .set({ enqueuedAt: null })
+    .where(
+      and(eq(invitation.id, invitationId), eq(invitation.tokenHash, tokenHash))
+    );
 }
 
 async function processMessage(message: Message) {
