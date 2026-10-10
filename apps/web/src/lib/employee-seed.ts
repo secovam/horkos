@@ -3,6 +3,7 @@ import { newInvitationSchema } from "./invitation";
 interface CsvRecord {
   line: number;
   fields: string[];
+  malformed: boolean;
 }
 
 export interface SeedIssue {
@@ -13,24 +14,33 @@ export interface SeedIssue {
 const EXPECTED_HEADER = ["nombre", "correo"];
 
 // RFC 4180 fields with quotes, embedded commas and newlines; `line` is where each record starts.
+// A quote anywhere but around a whole field marks the record malformed rather than being dropped.
 function parseCsv(input: string): CsvRecord[] {
   const text = input.replace(/^﻿/u, "");
   const records: CsvRecord[] = [];
   let fields: string[] = [];
   let field = "";
   let quoted = false;
+  let closedQuote = false;
+  let malformed = false;
   let line = 1;
   let recordLine = 1;
 
-  function endRecord() {
+  function endField() {
     fields.push(field);
+    field = "";
+    closedQuote = false;
+  }
+
+  function endRecord() {
+    endField();
 
     if (fields.some((value) => value.trim() !== "")) {
-      records.push({ line: recordLine, fields });
+      records.push({ line: recordLine, fields, malformed });
     }
 
     fields = [];
-    field = "";
+    malformed = false;
     recordLine = line;
   }
 
@@ -49,20 +59,22 @@ function parseCsv(input: string): CsvRecord[] {
         index += 1;
       } else {
         quoted = false;
+        closedQuote = true;
       }
-    } else if (char === '"') {
-      quoted = true;
     } else if (char === ",") {
-      fields.push(field);
-      field = "";
+      endField();
     } else if (char === "\n") {
       endRecord();
+    } else if (char === '"' && field === "" && !closedQuote) {
+      quoted = true;
     } else if (char !== "\r" || text[index + 1] !== "\n") {
       // Only CRLF's carriage return is a line ending; a stray one stays and fails validation.
+      malformed ||= closedQuote || char === '"';
       field += char;
     }
   }
 
+  malformed ||= quoted;
   endRecord();
 
   return records;
@@ -72,7 +84,14 @@ function sqlString(value: string) {
   return `'${value.replaceAll("'", "''")}'`;
 }
 
-function parseRow(fields: string[]) {
+function parseRow({ fields, malformed }: CsvRecord) {
+  if (malformed) {
+    return {
+      ok: false as const,
+      reason: "Hay comillas sin cerrar o fuera de lugar",
+    };
+  }
+
   if (fields.length !== EXPECTED_HEADER.length) {
     return {
       ok: false as const,
@@ -106,7 +125,8 @@ export function buildEmployeeSeed(
   const firstLineByEmail = new Map<string, number>();
 
   const headerMatches =
-    header?.fields.length === EXPECTED_HEADER.length &&
+    header?.malformed === false &&
+    header.fields.length === EXPECTED_HEADER.length &&
     header.fields.every(
       (value, index) => value.trim().toLowerCase() === EXPECTED_HEADER[index]
     );
@@ -124,8 +144,9 @@ export function buildEmployeeSeed(
     };
   }
 
-  for (const { line, fields } of rows) {
-    const row = parseRow(fields);
+  for (const record of rows) {
+    const { line } = record;
+    const row = parseRow(record);
     const firstLine = row.ok ? firstLineByEmail.get(row.email) : undefined;
 
     if (!row.ok) {

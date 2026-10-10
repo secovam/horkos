@@ -65,6 +65,33 @@ describe("buildEmployeeSeed", () => {
     expect(result.issues.map(({ line }) => line)).toStrictEqual([2]);
   });
 
+  test("keeps escaped quotes inside a quoted field", () => {
+    const result = seed(
+      'nombre,correo\n"Ana ""Anita"" Pérez",ana@example.com\n'
+    );
+
+    expect(result.sql).toBe(
+      `${insert("id-1", 'Ana "Anita" Pérez', "ana@example.com")}\n`
+    );
+  });
+
+  test("rejects quotes that do not wrap the whole field", () => {
+    const result = seed(
+      'nombre,correo\nAna,ana@ex"amp"le.com\n"Luis"x,luis@example.com\nBea,bea@example.com\n'
+    );
+
+    expect(result.issues.map(({ line }) => line)).toStrictEqual([2, 3]);
+    expect(result.sql).toBe(`${insert("id-1", "Bea", "bea@example.com")}\n`);
+  });
+
+  test("rejects a quoted field left open at the end of the file", () => {
+    const result = seed(
+      'nombre,correo\nAna,ana@example.com\nLuis,"luis@example.com\n'
+    );
+
+    expect(result.issues.map(({ line }) => line)).toStrictEqual([3]);
+  });
+
   test("keeps the first of repeated emails, ignoring case, and reports the rest", () => {
     const result = seed(
       "nombre,correo\nAna,ana@example.com\nAna otra vez,ANA@example.com\n"
