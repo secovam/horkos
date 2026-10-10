@@ -33,7 +33,9 @@ export async function createLocalApp() {
     const bundle = path.join(directory, "app.mjs");
     await writeFile(
       entry,
-      `export { default } from ${JSON.stringify(path.resolve(webRoot, "dist/server/server.js"))};`
+      `import app from ${JSON.stringify(path.resolve(webRoot, "dist/server/server.js"))};
+import { workerHandlers } from ${JSON.stringify(path.resolve(webRoot, "src/worker-handlers.ts"))};
+export default { fetch: (request, env, context) => app.fetch(request, env, context), ...workerHandlers };`
     );
     await build({
       entryPoints: [entry],
@@ -43,7 +45,12 @@ export async function createLocalApp() {
       platform: "node",
       conditions: ["workerd", "production"],
       target: "es2022",
-      external: ["cloudflare:workers", "node:*"],
+      external: [
+        "cloudflare:workers",
+        "node:*",
+        "tanstack-start-manifest:*",
+        "#tanstack-*",
+      ],
     });
 
     const options = {
@@ -64,6 +71,16 @@ export async function createLocalApp() {
             },
           },
           d1Databases: { DB: "test-db" },
+          queueProducers: { INVITATION_QUEUE: "invitation-emails" },
+          queueConsumers: {
+            "invitation-emails": {
+              maxBatchSize: 10,
+              maxConcurrency: 1,
+              maxRetries: 5,
+              retryDelay: 1,
+              maxBatchTimeout: 1,
+            },
+          },
           serviceBindings: { EMAIL: { name: "mailer", entrypoint: "Mailer" } },
           bindings: {
             BETTER_AUTH_SECRET: "test-only-secret-with-at-least-32-characters",
@@ -161,6 +178,12 @@ export async function createLocalApp() {
         }
 
         return messages;
+      },
+      async runScheduled() {
+        const worker = await ownedRuntime.getWorker("app");
+        const result = await worker.scheduled({ cron: "* * * * *" });
+
+        return result.outcome;
       },
       async failDelivery(fail: boolean) {
         await (fail ? outbox.put("fail", "true") : outbox.delete("fail"));
