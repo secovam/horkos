@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -32,8 +32,11 @@ if (issues.length > 0) {
     console.error(`Línea ${line}: ${reason}`);
   }
 
+  // D1 imports the file whenever it exists, so a previous run's SQL must not outlive a failed one.
+  await rm(output, { force: true });
+
   console.error(
-    `No se escribió nada: corrige ${issues.length} línea(s) y vuelve a correr el comando.`
+    `No hay seed de empleados: corrige ${issues.length} línea(s) y vuelve a correr el comando.`
   );
   process.exit(1);
 }
