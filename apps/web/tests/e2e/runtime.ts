@@ -75,11 +75,14 @@ export async function createLocalApp() {
           name: "mailer",
           modules: true,
           script: `import { WorkerEntrypoint } from "cloudflare:workers";
+            let sent = 0;
             export class Mailer extends WorkerEntrypoint {
               async send(message) {
+                const ordinal = String(sent++).padStart(8, "0");
                 if (await this.env.OUTBOX.get("fail")) throw new Error("test mail delivery failure");
                 const id = crypto.randomUUID();
-                await this.env.OUTBOX.put(Date.now() + "-" + id, JSON.stringify(message));
+                const stamp = String(Date.now()).padStart(15, "0");
+                await this.env.OUTBOX.put(stamp + "-" + ordinal + "-" + id, JSON.stringify(message));
                 return { messageId: id };
               }
             }
