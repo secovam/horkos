@@ -58,6 +58,13 @@ describe("buildEmployeeSeed", () => {
     expect(result.sql.trim().split("\n")).toHaveLength(2);
   });
 
+  test("rejects a carriage return inside a field instead of dropping it", () => {
+    const result = seed("nombre,correo\nAna,ana@exa\rmple.com\n");
+
+    expect(result.sql).toBe("");
+    expect(result.issues.map(({ line }) => line)).toStrictEqual([2]);
+  });
+
   test("keeps the first of repeated emails, ignoring case, and reports the rest", () => {
     const result = seed(
       "nombre,correo\nAna,ana@example.com\nAna otra vez,ANA@example.com\n"

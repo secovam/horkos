@@ -57,7 +57,8 @@ function parseCsv(input: string): CsvRecord[] {
       field = "";
     } else if (char === "\n") {
       endRecord();
-    } else if (char !== "\r") {
+    } else if (char !== "\r" || text[index + 1] !== "\n") {
+      // Only CRLF's carriage return is a line ending; a stray one stays and fails validation.
       field += char;
     }
   }
