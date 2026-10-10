@@ -67,4 +67,37 @@ test("each metric counts the non-revoked invitations at its stage", async () => 
     awaitingHr: 1,
     awaitingContract: 1,
   });
+  db.$client.close();
 });
+
+for (const revoked of [false, true]) {
+  test(`metrics return zero for ${revoked ? "only revoked invitations" : "an empty database"}`, async () => {
+    const db = drizzle(":memory:");
+    migrate(db, {
+      migrationsFolder: fileURLToPath(
+        new URL("../../../../packages/db/src/migrations", import.meta.url)
+      ),
+    });
+
+    if (revoked) {
+      await db.insert(invitation).values(
+        row({
+          revokedAt: at,
+          openedAt: at,
+          submittedAt: at,
+          hrCompletedAt: at,
+          contractGeneratedAt: at,
+        })
+      );
+    }
+
+    expect(await countInvitationMetrics(db)).toStrictEqual({
+      sent: 0,
+      opened: 0,
+      submitted: 0,
+      awaitingHr: 0,
+      awaitingContract: 0,
+    });
+    db.$client.close();
+  });
+}
