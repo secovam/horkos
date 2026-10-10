@@ -1,32 +1,26 @@
 # Invitation browsing
 
-HR finds invitations by employee name or email, switches between active and revoked records, and pages through results.
+HR finds invitations by name/email, switches status tabs and pages through results.
 
 ## Sub-features
 
-- `list-tabs` separates active and revoked invitations.
-- `list-search` filters by name/email and clears correctly.
-- `list-empty` distinguishes no invitations from no search matches.
-- `list-pages` shows ten rows per page with previous/next controls.
+- `list-search`: `%` and `_` match literally, without exposing terms in URLs.
+- `list-tabs`: filtered counts distinguish active and revoked rows.
+- `list-pages`: ten rows per page, boundary buttons, search resets page.
+- `list-empty`: empty and no-match states are separate manual entries.
 
 ## How to get to it (user POV)
 
-- Choose sidebar `Invitaciones`.
-- Open `/invitaciones` directly while logged in.
-- Choose tabs `Activas` and `Revocadas`, search, or use `Paginación` controls.
+Choose sidebar `Invitaciones`, then `Activas`/`Revocadas`, `Filtrar por nombre o correo`, or `Anterior`/`Siguiente`. HR can also navigate directly to `/invitaciones`.
 
-## Driving it with T3 preview
+## Driving it with Playwright
 
-Preconditions: logged-in fictional HR. Create fixture invitations through the management recipe. Pagination requires at least eleven matching fictional invitations; otherwise report that sub-feature skipped. Do not screenshot unrelated employees.
+```sh
+pnpm --filter web exec playwright test invitations.spec.ts --grep 'literal wildcard|pagination'
+```
 
-- **Reach list.** Navigate to `/invitaciones`, inspect the table headings `Empleado`, `Correo`, `Estado`, and `Último envío`.
-- **Search.** `preview_type({tabId,locator:"role=searchbox[name='Filtrar por nombre o correo']",text:"Verification Employee",clear:true})`; wait for the run's row. Repeat using its resolved email, then a unique nonexistent value. Require `Ninguna invitación coincide con la búsqueda.`. Clear the field and require rows return.
-- **Tabs.** Click `role=tab[name='Revocadas']` and require the revoked fixture row; click `role=tab[name='Activas']` and require active rows. Revoked rows must have no `Reenviar:` or `Revocar:` actions.
-- **Pages.** For eleven matching fixtures, click `role=button[name='Siguiente']` and require a different set of rows; click `role=button[name='Anterior']` and require the original page. First/last page controls disable at their boundaries.
-- **Proof.** Reload the page, filter again, and capture only fictional rows. Require that name/email search text never appears in the URL. In an empty isolated checkout, require `Aún no hay invitaciones aquí.` with no filter.
+The literal-search test creates two similarly named employees through the UI, searches `50%_`, requires only the literal match and checks all request URLs for absence of the term/email. It revokes the match and checks filtered tab counts. Pagination creates eleven fictional invitations through the UI, checks ten then one data row, and verifies searching from page two returns to page one without the email in the URL.
 
 ## Gotchas
 
-- Search debounces for 300 ms; wait for the result rather than taking an immediate snapshot.
-- Filter text is local state and does not survive reload. Requests use POST to keep personal data out of URLs.
-- Page size is ten. A one-row fixture does not prove pagination or global search.
+Search debounces; wait for the resulting row set. It lives in component state and resets on reload. Both header and empty-state render `Nueva invitación`; the harness selects the header trigger. When changing empty states, exercise the separate empty-state trigger too and record it as an additional entry.

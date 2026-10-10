@@ -1,33 +1,27 @@
 # Invitation management
 
-HR creates and emails an invitation, cancels a draft, resends with a replacement link, and revokes access.
+HR creates invitations, replaces links, revokes access, and reactivates with a fresh emailed link.
 
 ## Sub-features
 
-- `invite-create` persists and emails an invitation.
-- `invite-cancel` closes a draft without saving.
-- `invite-duplicate` rejects a second active invitation for the same email.
-- `invite-resend` rotates the link after sending succeeds.
-- `invite-revoke` removes access and moves the row to revoked records.
+- `invite-cancel-create-duplicate`: cancel writes nothing; create stores and emails; duplicate sends nothing.
+- `invite-resend`: old link stops working and replacement works.
+- `invite-revoke-reactivate`: revoke blocks access; reactivate sends fresh token on the same row.
+- `invite-revoked-email`: creation is denied until HR uses reactivation.
+- `invite-delivery-failure`: failed resend preserves the old link; failed reactivation remains revoked.
 
 ## How to get to it (user POV)
 
-- Open `/invitaciones` and choose `Nueva invitación`.
-- Choose the row's `Reenviar: Verification Employee` or `Revocar: Verification Employee` action, then confirm or cancel.
+Open the list and `Nueva invitación`. Row actions are `Reenviar: Verification Employee`, `Revocar: Verification Employee`, and, in `Revocadas`, `Reactivar: Verification Employee`. Confirm in the alert dialog or choose `Cancelar`.
 
-## Driving it with T3 preview
+## Driving it with Playwright
 
-Preconditions: fictional HR session and no active invitation for the resolved `employee-$VERIFY_RUN@example.com`. Record fixture row IDs and newly captured email paths after each send.
+```sh
+pnpm --filter web exec playwright test invitations.spec.ts --grep 'cancel does|resend invalidates|failed resend|revoked email'
+```
 
-- **Cancel.** Click `role=button[name='Nueva invitación']`; type `Verification Employee` into `input[name='employeeName']` and the resolved fixture email into `input[name='email']`, using the snapshot to confirm those handles. Click `role=button[name='Cancelar']`. Require dialog closes with unchanged run-owned invitation/mail counts.
-- **Create.** Reopen the dialog and fill the labels `Nombre del empleado` and `Correo electrónico` with the same fictional values. Click `role=button[name='Enviar invitación']`. Require `Invitación enviada`, a filtered row, a new local email containing the employee link, and read-only count one for the fixture email. Save its ID and sent timestamp without exposing its hash.
-- **Duplicate.** Repeat creation with the same email. Require `Ya existe una invitación activa para este correo.` and no additional row/mail. Close the dialog.
-- **Resend.** Filter to the fixture and click `role=button[name='Reenviar: Verification Employee']`. Require `¿Reenviar la invitación?`; cancel once and check unchanged mail count/link validity. Reopen and confirm `role=button[name='Reenviar']`. Require `Invitación reenviada`, a new local message, and a later `sent_at`. The old employee link must fail and the new one must work.
-- **Revoke.** Click `role=button[name='Revocar: Verification Employee']`. Require `¿Revocar la invitación?`; cancel once and confirm the link still works. Reopen and click `role=button[name='Revocar']`. Require `Invitación revocada`; the row disappears from `Activas`, appears in `Revocadas`, and the current link fails. Read-only query must show non-null `revoked_at`.
-- **Reinvite.** After revocation, creating another invitation for the same email must succeed with a new link. Record the new row for cleanup too.
+The recipes fill `Nombre del empleado` and `Correo electrónico`, submit `Enviar invitación`, and verify visible rows and captured mail. Cancellation and duplicates preserve row/mail counts. Lifecycle tests open both original and replacement links in an anonymous browser and require validity to track resend/revoke/reactivate. Reactivation preserves one invitation row and never restores the compromised old token. Failure tests reject only the external `EMAIL.send` boundary, then check real recovery through the UI and employee route.
 
 ## Gotchas
 
-- Create persists before sending mail. If mail fails, the row remains and the UI says `La invitación se guardó, pero no se pudo enviar el correo. Intenta reenviarla.`. Resend instead of expecting rollback.
-- Resend sends before rotating the token; send failure must preserve the prior link. Verify failure only when an existing boundary can safely simulate it; report untested failure cases.
-- Dialog and row buttons can share text. Scope ambiguous actions to the visible dialog or alertdialog from the snapshot.
+Create persists before send; a failed initial delivery leaves a row that HR can resend. A revoked email cannot be reinvited by creating another row; reactivate it from `Revocadas`. Resend swaps the hash before mail and restores the prior hash if delivery fails. Reactivation delivery failure revokes again. Buttons with identical labels must be scoped to the alert dialog. Initial-create failure and action cancellation are additional manual cases when those branches change.

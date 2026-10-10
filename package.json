@@ -27,6 +27,8 @@
     "dev": "portless run --name horkos pnpm --filter @horkos/infra dev",
     "build": "turbo run build",
     "check-types": "turbo run check-types",
+    "test": "turbo run test",
+    "test:e2e": "turbo run test:e2e",
     "db:generate": "turbo run db:generate -F @horkos/db --",
     "deploy": "turbo run deploy -F @horkos/infra --",
     "destroy": "turbo run destroy -F @horkos/infra --",

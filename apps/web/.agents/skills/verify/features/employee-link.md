@@ -1,32 +1,27 @@
 # Employee invitation link
 
-An employee opens the emailed link without an account and sees whether it is valid. The current page records opening; it does not collect documents or employee details yet.
+Employees open an emailed link without an account. The current page records opening and displays status; collection controls are not implemented yet.
 
 ## Sub-features
 
-- `employee-valid` accepts the emailed link without HR login.
-- `employee-open` records the first hydrated visit once.
-- `employee-invalid` hides unknown, revoked, and replaced links behind the same message.
-- `employee-mobile` remains readable on a phone viewport.
+- `employee-scanner`: HTML GET does not mark the invitation opened.
+- `employee-first-open`: hydration marks the first visit and later visits preserve its timestamp.
+- `employee-mobile`: anonymous 390 × 844 context sees valid and invalid status.
+- `employee-referrer`: token page uses `no-referrer`.
+- `employee-lifecycle`: old, revoked and replaced links stay unavailable, including after reactivation.
 
 ## How to get to it (user POV)
 
-- Open the invitation link from the original email.
-- Open a replacement link after HR resends.
-- Revisit an original, invalid, or revoked `/invitacion/<token>` link.
+Open the original emailed link, a resend/reactivation email, or a previously used link. No account or HR session is needed.
 
-## Driving it with T3 preview
+## Driving it with Playwright
 
-Preconditions: invitation created through the UI and its link read from the run's local email capture. Use a separate owned browser tab without authenticating as HR.
+```sh
+pnpm --filter web exec playwright test invitations.spec.ts --grep 'scanner GET|resend invalidates|failed resend'
+```
 
-- **Scanner behavior.** Fetch the fictional invitation URL with curl before browser navigation. Query only its recorded row's `opened_at` read-only; HTML fetching must leave it null.
-- **Valid visit.** `preview_navigate` to the actual captured link, then `preview_wait_for({tabId,text:"Tu invitación fue recibida"})`. Wait until the fixture's `opened_at` becomes non-null. Reload and require the same timestamp.
-- **Invalid visit.** Navigate to `http://localhost:3101/invitacion/not-a-valid-token`; require `Este enlace no está disponible`. Repeat with the old link after resend and the current link after revocation; all must show the same unavailable state.
-- **Mobile.** `preview_resize({tabId,mode:"preset",preset:"iphone-12-pro",orientation:"portrait"})`; revisit the valid fictional link and require readable status without horizontal overflow. Save a screenshot with the URL redacted.
+The scanner test obtains a real UI-created invitation, fetches its HTML, and checks `opened_at` remains null. It opens the email link in an independent anonymous mobile context, requires `Tu invitación fue recibida`, waits for the database timestamp, reloads and waits for the hydration POST before checking the same timestamp. It verifies the referrer meta tag and saves `mobile-employee.png`. An unknown link requires `Este enlace no está disponible`; dashboard remains protected in the employee context. Lifecycle recipes check original/replaced/revoked/reactivated links individually.
 
 ## Gotchas
 
-- Opening is recorded after browser hydration. HTML alone is insufficient proof of tracking.
-- Resending replaces the token, so keep old and new URLs locally until testing invalidation.
-- Tokens are access credentials. Do not put raw links into logs, committed files, screenshots with browser URLs, or shared reports.
-- No upload, extraction, review, or download controls exist here yet.
+HTML alone does not prove hydration tracking. Keep old URLs locally until the replacement check finishes. Traces contain fictional tokens; redact them before sharing. Screenshots capture page content without the browser URL bar. No upload, extraction, HR review or contract download is covered.
