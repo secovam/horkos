@@ -22,8 +22,8 @@ function HomeComponent() {
               </h1>
               <p className="text-muted-foreground">
                 Ayúdanos a mantener al día tu información como colaborador.
-                Gracias por participar.
               </p>
+              <p className="text-muted-foreground">Gracias por participar.</p>
             </div>
           </div>
         </CardContent>
