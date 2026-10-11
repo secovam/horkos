@@ -27,6 +27,7 @@
 
 .horkos-tour .driver-popover-close-btn {
   align-items: center;
+  border-radius: var(--radius-md);
   color: var(--muted-foreground);
   display: flex;
   font-size: 1.5rem;
@@ -101,4 +102,8 @@
 
 .horkos-tour .driver-popover-arrow-side-right {
   border-right-color: var(--card);
+}
+
+.driver-popover.horkos-tour:focus {
+  outline: none;
 }

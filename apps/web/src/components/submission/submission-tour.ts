@@ -91,8 +91,16 @@ export function useSubmissionTour() {
       nextBtnText: "Siguiente",
       prevBtnText: "Anterior",
       doneBtnText: "Listo",
-      onPopoverRender: ({ closeButton }) => {
+      onPopoverRender: ({ wrapper, closeButton }) => {
         closeButton.setAttribute("aria-label", "Cerrar guía");
+        wrapper.setAttribute("tabindex", "-1");
+      },
+      // driver.js focuses the close button, which draws a focus ring on every step.
+      // Focusing the popover itself keeps keyboard use (Tab, Esc, arrows) without it.
+      onHighlighted: () => {
+        document
+          .querySelector<HTMLElement>(".driver-popover")
+          ?.focus({ preventScroll: true });
       },
       // Only runs when the person ends the tour (close, Esc, overlay, Listo).
       // Tearing it down from code with destroy() skips it, so a remount does not count as seen.

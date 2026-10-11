@@ -301,6 +301,9 @@ test("employee gets a guided tour once and can replay it", async ({
     await expect(popover).toContainText("Antes de empezar");
     await expect(popover).toContainText("1 de 5");
     await expectOnScreen(popover);
+    await expect(
+      popover.getByRole("button", { name: "Cerrar guía" })
+    ).not.toBeFocused();
     await desktop.screenshot({
       path: test.info().outputPath("tour-step-1.png"),
       animations: "disabled",
