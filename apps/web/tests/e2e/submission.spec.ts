@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 import {
   confirmAction,
@@ -55,6 +55,24 @@ async function attachDocuments(page: Page, taxStatus = PDF) {
   });
 }
 
+function tourPopover(page: Page) {
+  return page.locator(".driver-popover");
+}
+
+async function expectOnScreen(locator: Locator) {
+  const box = await locator.boundingBox();
+
+  expect(box?.x).toBeGreaterThanOrEqual(0);
+  expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(390);
+  expect(box?.y).toBeGreaterThanOrEqual(0);
+  expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(844);
+}
+
+async function dismissTour(page: Page) {
+  await page.getByRole("button", { name: "Cerrar guía" }).click();
+  await expect(tourPopover(page)).toBeHidden();
+}
+
 function count(app: LocalApp, table: string) {
   return app.db
     .prepare(`SELECT count(*) AS count FROM ${table}`)
@@ -86,6 +104,7 @@ test("employee submits documents and data from a phone; HR sees it received", as
     await expect(
       phone.getByRole("heading", { name: "Completa tu información" })
     ).toBeVisible();
+    await dismissTour(phone);
     await expect(phone.getByLabel("Nombre completo")).toHaveValue(
       "Verification Employee"
     );
@@ -212,6 +231,7 @@ test("a revoked link cannot submit, even from an already open form", async ({
     await expect(
       phone.getByRole("heading", { name: "Completa tu información" })
     ).toBeVisible();
+    await dismissTour(phone);
     await fillFields(phone);
     await attachDocuments(phone);
 
@@ -235,6 +255,89 @@ test("a revoked link cannot submit, even from an already open form", async ({
     await expect(
       phone.getByRole("heading", { name: "Este enlace no está disponible" })
     ).toBeVisible();
+  } finally {
+    await employee.close();
+  }
+});
+
+test("employee gets a guided tour once on a phone and can replay it", async ({
+  app,
+  browser,
+}) => {
+  const link = await invitationLink(app, 1);
+
+  const employee = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+    reducedMotion: "reduce",
+  });
+
+  try {
+    const phone = await employee.newPage();
+    const popover = tourPopover(phone);
+
+    await phone.goto(link);
+    await expect(popover).toContainText("Antes de empezar");
+    await expect(popover).toContainText("1 de 5");
+    await expectOnScreen(popover);
+    await phone.screenshot({
+      path: test.info().outputPath("tour-step-1.png"),
+      animations: "disabled",
+    });
+
+    await popover.getByRole("button", { name: "Siguiente" }).click();
+    await expect(popover).toContainText("Documentos");
+    await expect(popover).toContainText("2 de 5");
+    await expect(
+      popover.getByRole("button", { name: "Anterior" })
+    ).toBeVisible();
+    await expect(
+      phone.getByLabel("Constancia de situación fiscal")
+    ).toBeInViewport();
+    await expectOnScreen(popover);
+    await phone.screenshot({
+      path: test.info().outputPath("tour-step-documents.png"),
+      animations: "disabled",
+    });
+
+    for (const title of ["Datos personales", "Domicilio", "Enviar"]) {
+      // oxlint-disable-next-line no-await-in-loop -- Steps are walked in order like a person would.
+      await popover.getByRole("button", { name: /Siguiente|Listo/u }).click();
+      // oxlint-disable-next-line no-await-in-loop -- Each step is checked before moving on.
+      await expect(popover).toContainText(title);
+      // oxlint-disable-next-line no-await-in-loop -- Each step is checked before moving on.
+      await expectOnScreen(popover);
+    }
+
+    await expect(popover).toContainText("5 de 5");
+    await expect(
+      phone.getByRole("button", { name: "Enviar mi información" })
+    ).toBeInViewport();
+    await popover.getByRole("button", { name: "Listo" }).click();
+    await expect(popover).toBeHidden();
+
+    expect(await phone.evaluate(() => Object.keys(localStorage))).toEqual([
+      "horkos:submission-tour:v1",
+    ]);
+
+    const hydrated = phone.waitForResponse(
+      (response) => response.request().method() === "POST"
+    );
+
+    await phone.reload();
+    await hydrated;
+    await expect(popover).toBeHidden();
+
+    await phone.getByRole("button", { name: "¿Cómo lleno esto?" }).click();
+    await expect(popover).toContainText("1 de 5");
+    await phone.keyboard.press("Escape");
+    await expect(popover).toBeHidden();
+
+    await phone.getByRole("button", { name: "¿Cómo lleno esto?" }).click();
+    await expect(popover).toContainText("1 de 5");
+    await phone.touchscreen.tap(2, 2);
+    await expect(popover).toBeHidden();
   } finally {
     await employee.close();
   }

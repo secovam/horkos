@@ -10,6 +10,8 @@ Employees open an emailed link without an account. The page records opening, sho
 - `employee-referrer`: token page uses `no-referrer`.
 - `employee-submit`: the form asks for 3 documents (constancia fiscal, IMSS, comprobante de domicilio; PDF, JPEG or PNG up to 10 MB), nombre completo (prefilled), RFC, CURP, NSS and the address. Submitting stores one `submission` row, three `document` rows, objects in R2 under `invitations/{id}/employee/{kind}` and sets `submitted_at` (HR sees "Recibida"). Reloading shows "Recibimos tu información".
 - `employee-file-validation`: file type is checked on the server by magic bytes, so a text file renamed `.pdf` is rejected with a toast and nothing is stored.
+- `employee-tour`: the first open of an open invitation starts a 5 step driver.js tour (welcome, Documentos, Datos personales, Domicilio, Enviar) after hydration. It closes with the X, Esc, an overlay tap or "Listo", and `localStorage` key `horkos:submission-tour:v1` (no token) stops it reappearing. "¿Cómo lleno esto?" replays it. Dismiss it first (button "Cerrar guía") before driving the form, since it blocks clicks.
+- `employee-toast-mobile`: a long error toast wraps inside the 390 px viewport.
 - `employee-revoked-submit`: a form opened before HR revoked the link cannot submit.
 - `employee-lifecycle`: old, revoked and replaced links stay unavailable, including after reactivation.
 
