@@ -52,10 +52,14 @@ export default function MagicLinkForm() {
               </div>
             </header>
             {emailSent ? (
-              <output className="text-center text-sm">
-                Hemos enviado un enlace mágico a tu correo electrónico. Abre el
-                enlace para iniciar sesión. Puedes cerrar esta página.
-              </output>
+              <Card>
+                <CardContent>
+                  <output className="block text-center text-sm">
+                    Hemos enviado un enlace mágico a tu correo electrónico. Abre
+                    el enlace para iniciar sesión. Puedes cerrar esta página.
+                  </output>
+                </CardContent>
+              </Card>
             ) : (
               <form
                 className="space-y-4"
