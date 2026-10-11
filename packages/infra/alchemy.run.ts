@@ -21,6 +21,9 @@ export const db = Cloudflare.D1.Database("database", {
     : [],
 });
 
+// Private on purpose: no custom domain and `publicAccess` stays off, so objects are reachable only through the Worker binding.
+export const documents = Cloudflare.R2.Bucket("documents");
+
 export const invitationQueue = Cloudflare.Queues.Queue("invitation-emails");
 
 export const web = Cloudflare.Website.Vite("web", {
@@ -31,6 +34,7 @@ export const web = Cloudflare.Website.Vite("web", {
   },
   env: {
     DB: db,
+    DOCUMENTS: documents,
     INVITATION_QUEUE: invitationQueue,
     EMAIL: Cloudflare.Email.SendEmail("EMAIL"),
     EMAIL_FROM: Config.String("EMAIL_FROM"),
