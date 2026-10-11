@@ -71,6 +71,7 @@ export default { fetch: (request, env, context) => app.fetch(request, env, conte
             },
           },
           d1Databases: { DB: "test-db" },
+          r2Buckets: { DOCUMENTS: "documents" },
           queueProducers: { INVITATION_QUEUE: "invitation-emails" },
           queueConsumers: {
             "invitation-emails": {
@@ -149,12 +150,30 @@ export default { fetch: (request, env, context) => app.fetch(request, env, conte
       )
       .bind("verification-hr", "Verification HR", "verification-hr@example.com")
       .run();
+    const documents = await runtime.getR2Bucket("DOCUMENTS", "app");
     const outbox = await runtime.getKVNamespace("OUTBOX", "mailer");
     const ownedRuntime = runtime;
 
     return {
       baseURL,
       db,
+      async listObjects() {
+        const listed = await documents.list();
+
+        return listed.objects.map(({ key }) => key);
+      },
+      async getObject(key: string) {
+        const object = await documents.get(key);
+
+        if (!object) {
+          return null;
+        }
+
+        return {
+          bytes: new Uint8Array(await object.arrayBuffer()),
+          contentType: object.httpMetadata?.contentType,
+        };
+      },
       async getMail() {
         const messages: CapturedMail[] = [];
 

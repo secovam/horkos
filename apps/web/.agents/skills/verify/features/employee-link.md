@@ -1,6 +1,6 @@
 # Employee invitation link
 
-Employees open an emailed link without an account. The current page records opening and displays status; collection controls are not implemented yet.
+Employees open an emailed link without an account. The page records opening, shows the submission form while the invitation is open, and shows a confirmation once it was submitted. Extraction, HR review and contract download are not implemented.
 
 ## Sub-features
 
@@ -8,6 +8,9 @@ Employees open an emailed link without an account. The current page records open
 - `employee-first-open`: hydration marks the first visit and later visits preserve its timestamp.
 - `employee-mobile`: anonymous 390 × 844 context sees valid and invalid status.
 - `employee-referrer`: token page uses `no-referrer`.
+- `employee-submit`: the form asks for 3 documents (constancia fiscal, IMSS, comprobante de domicilio; PDF, JPEG or PNG up to 10 MB), nombre completo (prefilled), RFC, CURP, NSS and the address. Submitting stores one `submission` row, three `document` rows, objects in R2 under `invitations/{id}/employee/{kind}` and sets `submitted_at` (HR sees "Recibida"). Reloading shows "Recibimos tu información".
+- `employee-file-validation`: file type is checked on the server by magic bytes, so a text file renamed `.pdf` is rejected with a toast and nothing is stored.
+- `employee-revoked-submit`: a form opened before HR revoked the link cannot submit.
 - `employee-lifecycle`: old, revoked and replaced links stay unavailable, including after reactivation.
 
 ## How to get to it (user POV)
@@ -18,10 +21,11 @@ Open the original emailed link, a resend/reactivation email, or a previously use
 
 ```sh
 pnpm --filter web exec playwright test invitations.spec.ts --grep 'scanner GET|resend invalidates|failed resend'
+pnpm --filter web test:e2e submission.spec.ts
 ```
 
-The scanner test obtains a real UI-created invitation, fetches its HTML, and checks `opened_at` remains null. It opens the email link in an independent anonymous mobile context, requires `Tu invitación fue recibida`, waits for the database timestamp, reloads and waits for the hydration POST before checking the same timestamp. It verifies the referrer meta tag and saves `mobile-employee.png`. An unknown link requires `Este enlace no está disponible`; dashboard remains protected in the employee context. Lifecycle recipes check original/replaced/revoked/reactivated links individually.
+The scanner test obtains a real UI-created invitation, fetches its HTML, and checks `opened_at` remains null. It opens the email link in an independent anonymous mobile context, requires the form heading `Completa tu información`, waits for the database timestamp, reloads and waits for the hydration POST before checking the same timestamp. It verifies the referrer meta tag and saves `mobile-employee.png`. An unknown link requires `Este enlace no está disponible`; dashboard remains protected in the employee context. `submission.spec.ts` drives the full form in a 390 × 844 mobile context with generated fixture files (fictional data only), inspects D1 and the Miniflare R2 bucket, and saves `form-filled.png` and `submitted.png`. Lifecycle recipes check original/replaced/revoked/reactivated links individually.
 
 ## Gotchas
 
-HTML alone does not prove hydration tracking. Keep old URLs locally until the replacement check finishes. Traces contain fictional tokens; redact them before sharing. Screenshots capture page content without the browser URL bar. No upload, extraction, HR review or contract download is covered.
+HTML alone does not prove hydration tracking. Keep old URLs locally until the replacement check finishes. Traces contain fictional tokens; redact them before sharing. Screenshots capture page content without the browser URL bar. Extraction, HR review and contract download are not covered.

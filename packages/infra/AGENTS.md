@@ -2,13 +2,13 @@
 
 ## Overview
 
-Alchemy (v2 beta, on Effect) stack that defines the Cloudflare resources: a D1 database, the invitation email Queue with its throttled consumer, and the `web` Worker built from `apps/web` (with an every-minute cron that feeds the queue). The stack outputs `databaseName`.
+Alchemy (v2 beta, on Effect) stack that defines the Cloudflare resources: a D1 database, a private R2 bucket for employee documents (`DOCUMENTS`, no public or r2.dev access), the invitation email Queue with its throttled consumer, and the `web` Worker built from `apps/web` (with an every-minute cron that feeds the queue). The stack outputs `databaseName`.
 
 ## Key files
 
 | File | Owns |
 | --- | --- |
-| `alchemy.run.ts` | Resources and the Worker bindings (`DB`, `INVITATION_QUEUE`, `EMAIL`, `EMAIL_FROM`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`) |
+| `alchemy.run.ts` | Resources and the Worker bindings (`DB`, `DOCUMENTS`, `INVITATION_QUEUE`, `EMAIL`, `EMAIL_FROM`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`) |
 | `.env.schema` | Deploy secrets such as `ALCHEMY_PASSWORD` |
 
 ## Commands

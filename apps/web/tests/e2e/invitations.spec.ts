@@ -57,7 +57,7 @@ test("scanner GET leaves unopened; mobile anonymous visit records first opening 
   const link = await invitationLink(app, 1);
   const response = await page.request.get(link);
   expect(response.status()).toBe(200);
-  expect(await response.text()).toContain("Tu invitación fue recibida");
+  expect(await response.text()).toContain("Completa tu información");
   expect(
     await app.db.prepare("SELECT opened_at FROM invitation").first("opened_at")
   ).toBeNull();
@@ -70,7 +70,7 @@ test("scanner GET leaves unopened; mobile anonymous visit records first opening 
     const employeePage = await employee.newPage();
     await employeePage.goto(link);
     await expect(
-      employeePage.getByRole("heading", { name: "Tu invitación fue recibida" })
+      employeePage.getByRole("heading", { name: "Completa tu información" })
     ).toBeVisible();
     await expect(employeePage.locator('meta[name="referrer"]')).toHaveAttribute(
       "content",
@@ -96,7 +96,7 @@ test("scanner GET leaves unopened; mobile anonymous visit records first opening 
     const reopenedResponse = await reopened;
     expect(reopenedResponse.ok()).toBe(true);
     await expect(
-      employeePage.getByRole("heading", { name: "Tu invitación fue recibida" })
+      employeePage.getByRole("heading", { name: "Completa tu información" })
     ).toBeVisible();
     expect(
       await app.db
@@ -138,7 +138,7 @@ test("resend invalidates old link; revoke blocks it; reactivate sends a fresh li
     ).toBeVisible();
     await employee.goto(resent);
     await expect(
-      employee.getByRole("heading", { name: "Tu invitación fue recibida" })
+      employee.getByRole("heading", { name: "Completa tu información" })
     ).toBeVisible();
     await confirmAction(page, "Revocar");
     await expect(
@@ -158,7 +158,7 @@ test("resend invalidates old link; revoke blocks it; reactivate sends a fresh li
     ).toBeVisible();
     await employee.goto(reactivated);
     await expect(
-      employee.getByRole("heading", { name: "Tu invitación fue recibida" })
+      employee.getByRole("heading", { name: "Completa tu información" })
     ).toBeVisible();
     await page.getByRole("tab", { name: /Activas/u }).click();
     await expect(
@@ -198,7 +198,7 @@ test("failed resend restores old link and failed reactivation remains revoked", 
   try {
     await employee.goto(original);
     await expect(
-      employee.getByRole("heading", { name: "Tu invitación fue recibida" })
+      employee.getByRole("heading", { name: "Completa tu información" })
     ).toBeVisible();
     await confirmAction(page, "Revocar");
     await page.getByRole("tab", { name: /Revocadas/u }).click();
