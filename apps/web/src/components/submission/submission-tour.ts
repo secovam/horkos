@@ -15,8 +15,7 @@ const TOUR_STEPS = [
   {
     anchor: "documents",
     title: "Documentos",
-    description:
-      "Sube cada archivo en PDF, JPG o PNG. En el celular puedes tomar la foto desde aquí.",
+    description: "Sube cada archivo en PDF, de hasta 10 MB.",
   },
   {
     anchor: "personal",

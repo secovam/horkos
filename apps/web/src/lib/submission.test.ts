@@ -23,12 +23,17 @@ const valid = {
 };
 
 describe("detectDocumentType", () => {
+  test("recognizes a PDF by its first bytes", () => {
+    expect(
+      detectDocumentType(new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d]))
+    ).toBe("application/pdf");
+  });
+
   test.each([
-    ["PDF", [0x25, 0x50, 0x44, 0x46, 0x2d], "application/pdf"],
-    ["JPEG", [0xff, 0xd8, 0xff, 0xe0], "image/jpeg"],
-    ["PNG", [0x89, 0x50, 0x4e, 0x47, 0x0d], "image/png"],
-  ])("recognizes %s by its first bytes", (_name, bytes, expected) => {
-    expect(detectDocumentType(new Uint8Array(bytes))).toBe(expected);
+    ["JPEG", [0xff, 0xd8, 0xff, 0xe0]],
+    ["PNG", [0x89, 0x50, 0x4e, 0x47, 0x0d]],
+  ])("rejects %s images", (_name, bytes) => {
+    expect(detectDocumentType(new Uint8Array(bytes))).toBeNull();
   });
 
   test("rejects a file whose bytes are not an allowed type", () => {
@@ -36,7 +41,7 @@ describe("detectDocumentType", () => {
 
     expect(detectDocumentType(script)).toBeNull();
     expect(detectDocumentType(new Uint8Array())).toBeNull();
-    expect(detectDocumentType(new Uint8Array([0xff, 0xd8]))).toBeNull();
+    expect(detectDocumentType(new Uint8Array([0x25, 0x50]))).toBeNull();
   });
 });
 

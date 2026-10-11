@@ -15,17 +15,17 @@ export const DOCUMENT_KINDS = {
   },
   imss: {
     label: "Constancia del IMSS (NSS)",
-    hint: "Tu constancia de vigencia de derechos o de asignación de NSS.",
+    hint: "El PDF de tu constancia de vigencia de derechos o de asignación de NSS.",
   },
   proof_of_address: {
     label: "Comprobante de domicilio",
-    hint: "Recibo de luz, agua, teléfono o estado de cuenta con menos de 3 meses.",
+    hint: "Recibo de luz de CFE o de teléfono de Telmex, en PDF, con menos de 3 meses.",
   },
 } satisfies Record<DocumentKind, { label: string; hint: string }>;
 
 export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 
-export const DOCUMENT_ACCEPT = "application/pdf,image/jpeg,image/png";
+export const DOCUMENT_ACCEPT = "application/pdf";
 
 // Deterministic, so a retried submit overwrites instead of orphaning. The bucket also
 // holds HR uploads later, under `invitations/{id}/hr/`.
@@ -33,21 +33,15 @@ export function employeeObjectKey(invitationId: string, kind: DocumentKind) {
   return `invitations/${invitationId}/employee/${kind}`;
 }
 
-const SIGNATURES = [
-  { contentType: "application/pdf", bytes: [0x25, 0x50, 0x44, 0x46] },
-  { contentType: "image/jpeg", bytes: [0xff, 0xd8, 0xff] },
-  { contentType: "image/png", bytes: [0x89, 0x50, 0x4e, 0x47] },
-] as const;
+const PDF_SIGNATURE = [0x25, 0x50, 0x44, 0x46] as const;
 
 // The client-declared content type is untrusted, so the type comes from the file's first bytes.
 export function detectDocumentType(bytes: Uint8Array) {
-  const match = SIGNATURES.find(
-    ({ bytes: signature }) =>
-      signature.length <= bytes.length &&
-      signature.every((byte, index) => bytes[index] === byte)
-  );
+  const isPdf =
+    bytes.length >= PDF_SIGNATURE.length &&
+    PDF_SIGNATURE.every((byte, index) => bytes[index] === byte);
 
-  return match?.contentType ?? null;
+  return isPdf ? "application/pdf" : null;
 }
 
 export const documentFileSchema = z

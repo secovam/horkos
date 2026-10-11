@@ -251,10 +251,7 @@ export function SubmissionForm({
         <CardContent>
           <FieldSet>
             <FieldLegend>Documentos</FieldLegend>
-            <FieldDescription>
-              PDF, JPG o PNG de hasta 10 MB. En el celular puedes tomar la foto
-              desde aquí.
-            </FieldDescription>
+            <FieldDescription>PDF de hasta 10 MB.</FieldDescription>
             <FieldGroup>
               {DOCUMENT_KIND_LIST.map((kind) => (
                 <form.Field key={kind} name={`files.${kind}`}>

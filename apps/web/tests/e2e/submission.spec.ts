@@ -10,8 +10,6 @@ const PNG = Buffer.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x00,
 ]);
 
-const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0xff, 0xd9]);
-
 const FIELDS = {
   RFC: "xaxx010101ab1",
   CURP: "xexx010101hnerxx08",
@@ -31,21 +29,25 @@ async function fillFields(page: Page) {
   }
 }
 
-async function attachDocuments(page: Page, taxStatus = PDF) {
-  await page.getByLabel("Constancia de situación fiscal").setInputFiles({
-    name: "constancia.pdf",
-    mimeType: "application/pdf",
-    buffer: taxStatus,
-  });
+const VALID_TAX_STATUS = {
+  name: "constancia.pdf",
+  mimeType: "application/pdf",
+  buffer: PDF,
+};
+
+async function attachDocuments(page: Page, taxStatus = VALID_TAX_STATUS) {
+  await page
+    .getByLabel("Constancia de situación fiscal")
+    .setInputFiles(taxStatus);
   await page.getByLabel("Constancia del IMSS (NSS)").setInputFiles({
-    name: "imss.png",
-    mimeType: "image/png",
-    buffer: PNG,
+    name: "imss.pdf",
+    mimeType: "application/pdf",
+    buffer: PDF,
   });
   await page.getByLabel("Comprobante de domicilio").setInputFiles({
-    name: "domicilio.jpg",
-    mimeType: "image/jpeg",
-    buffer: JPEG,
+    name: "domicilio.pdf",
+    mimeType: "application/pdf",
+    buffer: PDF,
   });
 }
 
@@ -111,16 +113,32 @@ test("employee submits documents and data from a phone; HR sees it received", as
     expect(await count(app, "submission")).toBe(0);
 
     await fillFields(phone);
-    await attachDocuments(phone, Buffer.from("<script>not a pdf</script>"));
-    await phone.getByRole("button", { name: "Enviar mi información" }).click();
-    await expect(
-      phone.getByRole("alert").filter({
-        hasText:
-          "Constancia de situación fiscal: sube un archivo PDF, JPG o PNG.",
-      })
-    ).toBeVisible();
-    expect(await count(app, "submission")).toBe(0);
-    expect(await app.listObjects()).toHaveLength(0);
+
+    for (const rejected of [
+      {
+        name: "constancia.pdf",
+        mimeType: "application/pdf",
+        buffer: Buffer.from("<script>not a pdf</script>"),
+      },
+      { name: "constancia.png", mimeType: "image/png", buffer: PNG },
+    ]) {
+      // oxlint-disable-next-line no-await-in-loop -- Each rejection is checked before the next attempt.
+      await attachDocuments(phone, rejected);
+      // oxlint-disable-next-line no-await-in-loop -- Each rejection is checked before the next attempt.
+      await phone
+        .getByRole("button", { name: "Enviar mi información" })
+        .click();
+      // oxlint-disable-next-line no-await-in-loop -- Each rejection is checked before the next attempt.
+      await expect(
+        phone.getByRole("alert").filter({
+          hasText: "Constancia de situación fiscal: sube un archivo PDF.",
+        })
+      ).toBeVisible();
+      // oxlint-disable-next-line no-await-in-loop -- Each rejection is checked before the next attempt.
+      expect(await count(app, "submission")).toBe(0);
+      // oxlint-disable-next-line no-await-in-loop -- Each rejection is checked before the next attempt.
+      expect(await app.listObjects()).toHaveLength(0);
+    }
 
     await attachDocuments(phone);
     await expect(phone.getByLabel("RFC", { exact: true })).toHaveValue(
@@ -170,12 +188,12 @@ test("employee submits documents and data from a phone; HR sees it received", as
       {
         kind: "imss",
         object_key: `invitations/${invitationId}/employee/imss`,
-        content_type: "image/png",
+        content_type: "application/pdf",
       },
       {
         kind: "proof_of_address",
         object_key: `invitations/${invitationId}/employee/proof_of_address`,
-        content_type: "image/jpeg",
+        content_type: "application/pdf",
       },
       {
         kind: "tax_status",

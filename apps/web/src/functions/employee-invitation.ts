@@ -104,7 +104,7 @@ async function readDocument(
   const contentType = detectDocumentType(new Uint8Array(bytes.slice(0, 8)));
 
   if (!contentType) {
-    throw new Error(`${label}: sube un archivo PDF, JPG o PNG.`);
+    throw new Error(`${label}: sube un archivo PDF.`);
   }
 
   return { kind, bytes, contentType, fileName: file.name, size: file.size };
