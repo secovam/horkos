@@ -6,7 +6,7 @@ export const Route = createFileRoute("/")({
 
 function HomeComponent() {
   return (
-    <main className="grid h-svh place-items-center">
+    <main className="login-background grid h-svh place-items-center">
       <h1 className="text-4xl font-semibold">Horkos</h1>
     </main>
   );

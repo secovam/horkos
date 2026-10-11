@@ -7,6 +7,14 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@utility login-background {
+  background-image:
+    linear-gradient(rgb(0 0 0 / 35%), rgb(0 0 0 / 35%)),
+    url("https://secovamcapitalhumano.com.mx/assets/imgs/fondo_login.jpg");
+  background-position: center;
+  background-size: cover;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #0f1b2d;

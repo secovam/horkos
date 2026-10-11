@@ -7,5 +7,9 @@ export const Route = createFileRoute("/login")({
 });
 
 function RouteComponent() {
-  return <MagicLinkForm />;
+  return (
+    <main className="login-background flex min-h-svh justify-center">
+      <MagicLinkForm />
+    </main>
+  );
 }
