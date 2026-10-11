@@ -42,7 +42,7 @@ export default function MagicLinkForm() {
                 src="/logo-secovam.png"
               />
               <div className="space-y-2">
-                <h1 className="text-foreground text-2xl font-semibold">
+                <h1 className="text-secondary-foreground text-2xl font-semibold">
                   Acceso para colaboradores
                 </h1>
                 <p className="text-muted-foreground">

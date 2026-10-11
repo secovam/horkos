@@ -17,7 +17,7 @@ function HomeComponent() {
               src="/logo-secovam.png"
             />
             <div className="space-y-3">
-              <h1 className="text-foreground text-2xl font-semibold sm:text-3xl">
+              <h1 className="text-secondary-foreground text-2xl font-semibold sm:text-3xl">
                 Campaña de actualización de datos
               </h1>
               <p className="text-muted-foreground">
