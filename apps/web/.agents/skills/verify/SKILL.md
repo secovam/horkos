@@ -42,13 +42,13 @@ For the login feature:
 pnpm --filter web exec playwright test auth.spec.ts
 ```
 
-Other concrete recipes and selectors live in the feature map. Playwright uses labels and ARIA roles, drives the real form, reads the newly captured fictional email, opens its magic link, and observes the dashboard. No DOM setters, injected cookies or test-only HTTP endpoints. Tests use the built-in browser/page fixtures; employee coverage creates an independent anonymous context with a 390 × 844 viewport.
+Other concrete recipes and selectors live in the feature map. Playwright uses labels and ARIA roles, drives the real form, reads the newly captured fictional email, opens its magic link, and observes the dashboard. No DOM setters, injected cookies or test-only HTTP endpoints. Tests use the built-in browser/page fixtures; employee coverage creates an independent anonymous context with a 1280 × 900 viewport (390 × 844 touch for the phone notice).
 
 The fixture seeds an HR account because the app has no sign-up route. Other setup uses the UI. Read-only D1 assertions inspect only that test's fictional rows to corroborate persistence, first-open timestamps, denied writes and session removal. Failure tests deliberately reject delivery at `EMAIL.send`, then observe the existing app's recovery behavior.
 
 ## Evidence
 
-Playwright keeps action history, request/response evidence, DOM snapshots and screenshots under `apps/web/test-results/playwright/`. Each test records `trace.zip` and a final screenshot; employee mobile proof also saves `mobile-employee.png`. Failure cases produce `error-context.md`. Evidence survives runtime disposal.
+Playwright keeps action history, request/response evidence, DOM snapshots and screenshots under `apps/web/test-results/playwright/`. Each test records `trace.zip` and a final screenshot; employee proof also saves `employee.png`. Failure cases produce `error-context.md`. Evidence survives runtime disposal.
 
 Preserve a run before another Playwright command clears its default output:
 

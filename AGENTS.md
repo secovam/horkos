@@ -14,7 +14,7 @@ Extraction proposes; a person confirms. No contract is generated from extracted 
 
 ### 3. The employee link is effortless
 
-Employees have no account. The invitation link is the whole experience: it works on a phone, needs no sign-up, and can be finished in one sitting.
+Employees have no account. The invitation link is the whole experience: it works in a computer browser (phones get a notice to switch devices), needs no sign-up, and can be finished in one sitting.
 
 ### 4. The PDF is exact
 

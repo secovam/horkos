@@ -208,7 +208,7 @@ export function SubmissionForm({
       try {
         await submitInvitation({ data: body });
       } catch (error) {
-        // Inline next to the button: a toast would cover it on a phone.
+        // Inline next to the button, where the person is looking, so the error cannot be missed.
         setSubmitError(
           error instanceof Error
             ? error.message

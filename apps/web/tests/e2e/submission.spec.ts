@@ -55,13 +55,17 @@ function tourPopover(page: Page) {
   return page.locator(".driver-popover");
 }
 
+const DESKTOP = { width: 1280, height: 900 };
+
 async function expectOnScreen(locator: Locator) {
   const box = await locator.boundingBox();
 
   expect(box?.x).toBeGreaterThanOrEqual(0);
-  expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(390);
+  expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(DESKTOP.width);
   expect(box?.y).toBeGreaterThanOrEqual(0);
-  expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(844);
+  expect((box?.y ?? 0) + (box?.height ?? 0)).toBeLessThanOrEqual(
+    DESKTOP.height
+  );
 }
 
 async function dismissTour(page: Page) {
@@ -81,7 +85,7 @@ test.beforeEach(async ({ app, page }) => {
   await invite(page);
 });
 
-test("employee submits documents and data from a phone; HR sees it received", async ({
+test("employee submits documents and data from a computer; HR sees it received", async ({
   app,
   page,
   browser,
@@ -89,30 +93,32 @@ test("employee submits documents and data from a phone; HR sees it received", as
   const link = await invitationLink(app, 1);
 
   const employee = await browser.newContext({
-    viewport: { width: 390, height: 844 },
-    hasTouch: true,
-    isMobile: true,
+    viewport: DESKTOP,
   });
 
   try {
-    const phone = await employee.newPage();
-    await phone.goto(link);
+    const desktop = await employee.newPage();
+    await desktop.goto(link);
     await expect(
-      phone.getByRole("heading", { name: "Completa tu información" })
+      desktop.getByRole("heading", { name: "Completa tu información" })
     ).toBeVisible();
-    await dismissTour(phone);
-    await expect(phone.getByLabel("Nombre completo")).toHaveValue(
+    await dismissTour(desktop);
+    await expect(desktop.getByLabel("Nombre completo")).toHaveValue(
       "Verification Employee"
     );
 
-    await phone.getByRole("button", { name: "Enviar mi información" }).click();
-    await expect(phone.getByText("Sube este documento.").first()).toBeVisible();
+    await desktop
+      .getByRole("button", { name: "Enviar mi información" })
+      .click();
     await expect(
-      phone.getByText("El código postal tiene 5 dígitos.")
+      desktop.getByText("Sube este documento.").first()
+    ).toBeVisible();
+    await expect(
+      desktop.getByText("El código postal tiene 5 dígitos.")
     ).toBeVisible();
     expect(await count(app, "submission")).toBe(0);
 
-    await fillFields(phone);
+    await fillFields(desktop);
 
     for (const rejected of [
       {
@@ -123,14 +129,14 @@ test("employee submits documents and data from a phone; HR sees it received", as
       { name: "constancia.png", mimeType: "image/png", buffer: PNG },
     ]) {
       // oxlint-disable-next-line no-await-in-loop -- Each rejection is checked before the next attempt.
-      await attachDocuments(phone, rejected);
+      await attachDocuments(desktop, rejected);
       // oxlint-disable-next-line no-await-in-loop -- Each rejection is checked before the next attempt.
-      await phone
+      await desktop
         .getByRole("button", { name: "Enviar mi información" })
         .click();
       // oxlint-disable-next-line no-await-in-loop -- Each rejection is checked before the next attempt.
       await expect(
-        phone.getByRole("alert").filter({
+        desktop.getByRole("alert").filter({
           hasText: "Constancia de situación fiscal: sube un archivo PDF.",
         })
       ).toBeVisible();
@@ -140,19 +146,21 @@ test("employee submits documents and data from a phone; HR sees it received", as
       expect(await app.listObjects()).toHaveLength(0);
     }
 
-    await attachDocuments(phone);
-    await expect(phone.getByLabel("RFC", { exact: true })).toHaveValue(
+    await attachDocuments(desktop);
+    await expect(desktop.getByLabel("RFC", { exact: true })).toHaveValue(
       "xaxx010101ab1"
     );
-    await phone.screenshot({
+    await desktop.screenshot({
       path: test.info().outputPath("form-filled.png"),
       fullPage: true,
     });
-    await phone.getByRole("button", { name: "Enviar mi información" }).click();
+    await desktop
+      .getByRole("button", { name: "Enviar mi información" })
+      .click();
     await expect(
-      phone.getByRole("heading", { name: "Recibimos tu información" })
+      desktop.getByRole("heading", { name: "Recibimos tu información" })
     ).toBeVisible();
-    await phone.screenshot({
+    await desktop.screenshot({
       path: test.info().outputPath("submitted.png"),
       fullPage: true,
     });
@@ -211,11 +219,11 @@ test("employee submits documents and data from a phone; HR sees it received", as
 
     expect(pdf?.bytes).toEqual(new Uint8Array(PDF));
 
-    await phone.reload();
+    await desktop.reload();
     await expect(
-      phone.getByRole("heading", { name: "Recibimos tu información" })
+      desktop.getByRole("heading", { name: "Recibimos tu información" })
     ).toBeVisible();
-    await expect(phone.getByLabel("RFC", { exact: true })).toBeHidden();
+    await expect(desktop.getByLabel("RFC", { exact: true })).toBeHidden();
 
     await page.reload();
     await expect(
@@ -234,27 +242,29 @@ test("a revoked link cannot submit, even from an already open form", async ({
   const link = await invitationLink(app, 1);
 
   const employee = await browser.newContext({
-    viewport: { width: 390, height: 844 },
+    viewport: DESKTOP,
   });
 
   try {
-    const phone = await employee.newPage();
-    await phone.goto(link);
+    const desktop = await employee.newPage();
+    await desktop.goto(link);
     await expect(
-      phone.getByRole("heading", { name: "Completa tu información" })
+      desktop.getByRole("heading", { name: "Completa tu información" })
     ).toBeVisible();
-    await dismissTour(phone);
-    await fillFields(phone);
-    await attachDocuments(phone);
+    await dismissTour(desktop);
+    await fillFields(desktop);
+    await attachDocuments(desktop);
 
     await confirmAction(page, "Revocar");
     await expect(
       page.getByRole("button", { name: "Revocar: Verification Employee" })
     ).toBeHidden();
 
-    await phone.getByRole("button", { name: "Enviar mi información" }).click();
+    await desktop
+      .getByRole("button", { name: "Enviar mi información" })
+      .click();
     await expect(
-      phone.getByRole("alert").filter({
+      desktop.getByRole("alert").filter({
         hasText:
           "Este enlace ya no está disponible. Pide uno nuevo a Recursos Humanos.",
       })
@@ -263,37 +273,35 @@ test("a revoked link cannot submit, even from an already open form", async ({
     expect(await count(app, "document")).toBe(0);
     expect(await app.listObjects()).toHaveLength(0);
 
-    await phone.reload();
+    await desktop.reload();
     await expect(
-      phone.getByRole("heading", { name: "Este enlace no está disponible" })
+      desktop.getByRole("heading", { name: "Este enlace no está disponible" })
     ).toBeVisible();
   } finally {
     await employee.close();
   }
 });
 
-test("employee gets a guided tour once on a phone and can replay it", async ({
+test("employee gets a guided tour once and can replay it", async ({
   app,
   browser,
 }) => {
   const link = await invitationLink(app, 1);
 
   const employee = await browser.newContext({
-    viewport: { width: 390, height: 844 },
-    hasTouch: true,
-    isMobile: true,
+    viewport: DESKTOP,
     reducedMotion: "reduce",
   });
 
   try {
-    const phone = await employee.newPage();
-    const popover = tourPopover(phone);
+    const desktop = await employee.newPage();
+    const popover = tourPopover(desktop);
 
-    await phone.goto(link);
+    await desktop.goto(link);
     await expect(popover).toContainText("Antes de empezar");
     await expect(popover).toContainText("1 de 5");
     await expectOnScreen(popover);
-    await phone.screenshot({
+    await desktop.screenshot({
       path: test.info().outputPath("tour-step-1.png"),
       animations: "disabled",
     });
@@ -305,10 +313,10 @@ test("employee gets a guided tour once on a phone and can replay it", async ({
       popover.getByRole("button", { name: "Anterior" })
     ).toBeVisible();
     await expect(
-      phone.getByLabel("Constancia de situación fiscal")
+      desktop.getByLabel("Constancia de situación fiscal")
     ).toBeInViewport();
     await expectOnScreen(popover);
-    await phone.screenshot({
+    await desktop.screenshot({
       path: test.info().outputPath("tour-step-documents.png"),
       animations: "disabled",
     });
@@ -324,38 +332,40 @@ test("employee gets a guided tour once on a phone and can replay it", async ({
 
     await expect(popover).toContainText("5 de 5");
     await expect(
-      phone.getByRole("button", { name: "Enviar mi información" })
+      desktop.getByRole("button", { name: "Enviar mi información" })
     ).toBeInViewport();
     await popover.getByRole("button", { name: "Listo" }).click();
     await expect(popover).toBeHidden();
 
-    expect(await phone.evaluate(() => Object.keys(localStorage))).toEqual([
+    expect(await desktop.evaluate(() => Object.keys(localStorage))).toEqual([
       "horkos:submission-tour:v1",
     ]);
 
-    const hydrated = phone.waitForResponse(
+    const hydrated = desktop.waitForResponse(
       (response) => response.request().method() === "POST"
     );
 
-    await phone.reload();
+    await desktop.reload();
     await hydrated;
     await expect(popover).toBeHidden();
 
-    await phone.getByRole("button", { name: "¿Cómo lleno esto?" }).click();
+    await desktop.getByRole("button", { name: "¿Cómo lleno esto?" }).click();
     await expect(popover).toContainText("1 de 5");
-    await phone.keyboard.press("Escape");
+    await desktop.keyboard.press("Escape");
     await expect(popover).toBeHidden();
 
-    await phone.getByRole("button", { name: "¿Cómo lleno esto?" }).click();
+    await desktop.getByRole("button", { name: "¿Cómo lleno esto?" }).click();
     await expect(popover).toContainText("1 de 5");
-    await phone.touchscreen.tap(2, 2);
+    await desktop
+      .locator(".driver-overlay")
+      .click({ position: { x: 2, y: 2 } });
     await expect(popover).toBeHidden();
   } finally {
     await employee.close();
   }
 });
 
-test("on a desktop the tour sits beside each section after scrolling to it", async ({
+test("the tour sits beside each section after scrolling to it", async ({
   app,
   browser,
 }) => {

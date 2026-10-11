@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@horkos/ui/components/card";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { MailCheckIcon, MailXIcon } from "lucide-react";
+import { MailCheckIcon, MailXIcon, MonitorIcon } from "lucide-react";
 import { useEffect, useRef } from "react";
 
 import { SubmissionForm } from "@/components/submission/submission-form";
@@ -8,6 +8,7 @@ import {
   checkInvitation,
   openInvitation,
 } from "@/functions/employee-invitation";
+import { useTouchDevice } from "@/lib/use-touch-device";
 
 export const Route = createFileRoute("/invitacion/$token")({
   loader: ({ params }) => checkInvitation({ data: { token: params.token } }),
@@ -29,6 +30,12 @@ const NOTICE = {
     title: "Este enlace no está disponible",
     body: "Puede que haya sido reemplazado por uno más reciente. Revisa tu correo o pide un enlace nuevo a Recursos Humanos.",
   },
+  computerOnly: {
+    icon: MonitorIcon,
+    iconClass: "bg-muted text-muted-foreground",
+    title: "Abre este enlace en una computadora",
+    body: "El formulario necesita archivos PDF y se llena desde el navegador de una computadora. El mismo enlace funciona ahí.",
+  },
 } as const;
 
 function InvitationPage() {
@@ -37,6 +44,7 @@ function InvitationPage() {
   const router = useRouter();
   const recorded = useRef(false);
   const open = invitation.status === "open";
+  const touchDevice = useTouchDevice();
 
   // Recorded from the browser, after hydration, so only a person opening the link counts.
   useEffect(() => {
@@ -51,14 +59,16 @@ function InvitationPage() {
   return (
     <main className="bg-muted flex min-h-svh justify-center p-4">
       <div className="flex w-full max-w-md flex-col justify-center py-4">
-        {invitation.status === "open" ? (
+        {open && !touchDevice ? (
           <SubmissionForm
             token={token}
             employeeName={invitation.employeeName}
             onSubmitted={() => router.invalidate()}
           />
         ) : (
-          <NoticeCard content={NOTICE[invitation.status]} />
+          <NoticeCard
+            content={NOTICE[open ? "computerOnly" : invitation.status]}
+          />
         )}
       </div>
     </main>
