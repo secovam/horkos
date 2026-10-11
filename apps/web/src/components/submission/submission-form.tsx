@@ -10,9 +10,9 @@ import {
   FieldSet,
 } from "@horkos/ui/components/field";
 import { Input } from "@horkos/ui/components/input";
-import { toast } from "@horkos/ui/components/toast";
 import { useForm } from "@tanstack/react-form";
 import type { AnyFieldApi } from "@tanstack/react-form";
+import { useState } from "react";
 import type { ComponentProps } from "react";
 
 import {
@@ -163,6 +163,7 @@ export function SubmissionForm({
   onSubmitted: () => void;
 }) {
   const startTour = useSubmissionTour();
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const form = useForm({
     defaultValues: {
@@ -202,10 +203,13 @@ export function SubmissionForm({
         }
       }
 
+      setSubmitError(null);
+
       try {
         await submitInvitation({ data: body });
       } catch (error) {
-        toast.error(
+        // Inline next to the button: a toast would cover it on a phone.
+        setSubmitError(
           error instanceof Error
             ? error.message
             : "No se pudo enviar tu información. Inténtalo de nuevo."
@@ -307,6 +311,8 @@ export function SubmissionForm({
           </CardContent>
         </Card>
       ))}
+
+      {submitError ? <FieldError>{submitError}</FieldError> : null}
 
       <form.Subscribe selector={(state) => state.isSubmitting}>
         {(isSubmitting) => (

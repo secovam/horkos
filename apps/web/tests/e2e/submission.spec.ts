@@ -1,12 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 
-import {
-  confirmAction,
-  invitationLink,
-  invite,
-  login,
-  toastMessage,
-} from "./actions";
+import { confirmAction, invitationLink, invite, login } from "./actions";
 import { expect, test } from "./fixtures";
 import type { LocalApp } from "./runtime";
 
@@ -120,10 +114,10 @@ test("employee submits documents and data from a phone; HR sees it received", as
     await attachDocuments(phone, Buffer.from("<script>not a pdf</script>"));
     await phone.getByRole("button", { name: "Enviar mi información" }).click();
     await expect(
-      toastMessage(
-        phone,
-        "Constancia de situación fiscal: sube un archivo PDF, JPG o PNG."
-      )
+      phone.getByRole("alert").filter({
+        hasText:
+          "Constancia de situación fiscal: sube un archivo PDF, JPG o PNG.",
+      })
     ).toBeVisible();
     expect(await count(app, "submission")).toBe(0);
     expect(await app.listObjects()).toHaveLength(0);
@@ -242,10 +236,10 @@ test("a revoked link cannot submit, even from an already open form", async ({
 
     await phone.getByRole("button", { name: "Enviar mi información" }).click();
     await expect(
-      toastMessage(
-        phone,
-        "Este enlace ya no está disponible. Pide uno nuevo a Recursos Humanos."
-      )
+      phone.getByRole("alert").filter({
+        hasText:
+          "Este enlace ya no está disponible. Pide uno nuevo a Recursos Humanos.",
+      })
     ).toBeVisible();
     expect(await count(app, "submission")).toBe(0);
     expect(await count(app, "document")).toBe(0);
