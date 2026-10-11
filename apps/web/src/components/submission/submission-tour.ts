@@ -45,7 +45,7 @@ export function tourAnchor(anchor: TourAnchor) {
 
 const STEPS: DriveStep[] = TOUR_STEPS.map(({ anchor, title, description }) => ({
   element: `[data-tour="${anchor}"]`,
-  popover: { title, description },
+  popover: { title, description, side: "left", align: "start" },
 }));
 
 function hasSeenTour() {
