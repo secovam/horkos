@@ -13,21 +13,33 @@ const at = new Date("2026-01-15T10:00:00Z");
 
 describe("invitationStatus", () => {
   test("revocation wins over submission", () => {
-    expect(invitationStatus({ revokedAt: at, submittedAt: at })).toBe(
-      "revoked"
-    );
+    expect(
+      invitationStatus({ revokedAt: at, sentAt: at, submittedAt: at })
+    ).toBe("revoked");
   });
 
   test("a submitted invitation that was not revoked is submitted", () => {
-    expect(invitationStatus({ revokedAt: null, submittedAt: at })).toBe(
-      "submitted"
-    );
+    expect(
+      invitationStatus({ revokedAt: null, sentAt: at, submittedAt: at })
+    ).toBe("submitted");
   });
 
   test("an untouched invitation is pending", () => {
-    expect(invitationStatus({ revokedAt: null, submittedAt: null })).toBe(
-      "pending"
-    );
+    expect(
+      invitationStatus({ revokedAt: null, sentAt: at, submittedAt: null })
+    ).toBe("pending");
+  });
+
+  test("an invitation that was never sent is queued", () => {
+    expect(
+      invitationStatus({ revokedAt: null, sentAt: null, submittedAt: null })
+    ).toBe("queued");
+  });
+
+  test("revocation wins over queued", () => {
+    expect(
+      invitationStatus({ revokedAt: at, sentAt: null, submittedAt: null })
+    ).toBe("revoked");
   });
 });
 

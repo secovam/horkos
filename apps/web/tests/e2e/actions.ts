@@ -15,6 +15,11 @@ export function mailLink(message: CapturedMail) {
   return link;
 }
 
+// goey-toast also copies the message into a transient screen-reader alert, so match the toast itself.
+export function toastMessage(page: Page, text: string) {
+  return page.getByRole("region", { name: /Notifications/u }).getByText(text);
+}
+
 export async function login(app: LocalApp, page: Page) {
   await page.goto(`${app.baseURL}/login`);
   await page

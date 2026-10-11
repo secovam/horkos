@@ -3,7 +3,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { and, desc, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { ENV } from "@/env.server";
 import {
   INVITATIONS_PAGE_SIZE,
   escapeLikePattern,
@@ -15,7 +14,7 @@ import {
 import { countInvitationMetrics } from "@/lib/invitation-metrics";
 import { requireSessionMiddleware } from "@/middleware/auth";
 import { getDb } from "@/services";
-import { sendInvitationEmail } from "@/services/email";
+import { deliverInvitation } from "@/services/invitation-delivery";
 
 const TAB_FILTER = {
   active: isNull(invitation.revokedAt),
@@ -42,11 +41,7 @@ async function emailInvitation(
   { email, employeeName }: { email: string; employeeName: string }
 ) {
   try {
-    await sendInvitationEmail(ENV.EMAIL, ENV.EMAIL_FROM, {
-      email,
-      employeeName,
-      url: `${ENV.BETTER_AUTH_URL}/invitacion/${token}`,
-    });
+    await deliverInvitation(token, { email, employeeName });
   } catch {
     throw new Error(
       "La invitación se guardó, pero no se pudo enviar el correo. Intenta reenviarla."
@@ -148,6 +143,8 @@ export const resendInvitation = createServerFn({ method: "POST" })
         email: invitation.email,
         employeeName: invitation.employeeName,
         tokenHash: invitation.tokenHash,
+        sentAt: invitation.sentAt,
+        enqueuedAt: invitation.enqueuedAt,
       })
       .from(invitation)
       .where(and(eq(invitation.id, data.id), isNull(invitation.revokedAt)));
@@ -158,13 +155,17 @@ export const resendInvitation = createServerFn({ method: "POST" })
 
     // Swapping the hash only while it still matches what we read makes concurrent resends
     // lose before any email goes out, so no recipient gets a link that is already dead.
+    // A queued invitation has no hash yet, so the match is on null; this is also "send now".
+    // Clearing enqueued_at takes the row from the queue, so a pending message will not send again.
     const [swapped] = await db
       .update(invitation)
-      .set({ tokenHash, sentAt: new Date() })
+      .set({ tokenHash, sentAt: new Date(), enqueuedAt: null })
       .where(
         and(
           eq(invitation.id, data.id),
-          eq(invitation.tokenHash, active.tokenHash),
+          active.tokenHash === null
+            ? isNull(invitation.tokenHash)
+            : eq(invitation.tokenHash, active.tokenHash),
           isNull(invitation.revokedAt)
         )
       )
@@ -182,7 +183,11 @@ export const resendInvitation = createServerFn({ method: "POST" })
       // Put the previous link back so a failed delivery never leaves the employee without one.
       await db
         .update(invitation)
-        .set({ tokenHash: active.tokenHash })
+        .set({
+          tokenHash: active.tokenHash,
+          sentAt: active.sentAt,
+          enqueuedAt: active.enqueuedAt,
+        })
         .where(
           and(eq(invitation.id, data.id), eq(invitation.tokenHash, tokenHash))
         );
@@ -202,7 +207,9 @@ export const reactivateInvitation = createServerFn({ method: "POST" })
         email: invitation.email,
         employeeName: invitation.employeeName,
         revokedAt: invitation.revokedAt,
+        tokenHash: invitation.tokenHash,
         sentAt: invitation.sentAt,
+        enqueuedAt: invitation.enqueuedAt,
       })
       .from(invitation)
       .where(and(eq(invitation.id, data.id), isNotNull(invitation.revokedAt)));
@@ -217,7 +224,7 @@ export const reactivateInvitation = createServerFn({ method: "POST" })
 
     const [reactivated] = await db
       .update(invitation)
-      .set({ revokedAt: null, tokenHash, sentAt: new Date() })
+      .set({ revokedAt: null, tokenHash, sentAt: new Date(), enqueuedAt: null })
       .where(and(eq(invitation.id, data.id), isNotNull(invitation.revokedAt)))
       .returning({ id: invitation.id });
 
@@ -233,7 +240,12 @@ export const reactivateInvitation = createServerFn({ method: "POST" })
       // Revoke again so the employee never holds a live link nobody sent them.
       await db
         .update(invitation)
-        .set({ revokedAt: revoked.revokedAt, sentAt: revoked.sentAt })
+        .set({
+          revokedAt: revoked.revokedAt,
+          tokenHash: revoked.tokenHash,
+          sentAt: revoked.sentAt,
+          enqueuedAt: revoked.enqueuedAt,
+        })
         .where(
           and(eq(invitation.id, data.id), eq(invitation.tokenHash, tokenHash))
         );

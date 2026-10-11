@@ -2,10 +2,11 @@ import type { Badge } from "@horkos/ui/components/badge";
 import type { ComponentProps } from "react";
 import { z } from "zod";
 
-export type InvitationStatus = "revoked" | "submitted" | "pending";
+export type InvitationStatus = "revoked" | "submitted" | "pending" | "queued";
 
 export function invitationStatus(invitation: {
   revokedAt: Date | null;
+  sentAt: Date | null;
   submittedAt: Date | null;
 }): InvitationStatus {
   if (invitation.revokedAt) {
@@ -16,10 +17,15 @@ export function invitationStatus(invitation: {
     return "submitted";
   }
 
+  if (!invitation.sentAt) {
+    return "queued";
+  }
+
   return "pending";
 }
 
 export const INVITATION_STATUS = {
+  queued: { label: "En cola", variant: "outline" },
   pending: { label: "Pendiente", variant: "secondary" },
   submitted: { label: "Recibida", variant: "default" },
   revoked: { label: "Revocada", variant: "destructive" },

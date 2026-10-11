@@ -14,7 +14,9 @@ TanStack Start app (React 19, TanStack Router, Query, Form) built with Vite and 
 | `src/services.ts` | `getDb()` and `createAuth()`, the one place that builds db and auth |
 | `src/env.server.ts` | Server env, read from `cloudflare:workers` bindings |
 | `src/middleware/auth.ts` | Puts `session` on the server function context |
-| `server/plugins/evlog-auth.ts` | Nitro plugin that tags evlog request logs with the user |
+| `src/worker.ts` | Worker entry (`main` in `alchemy.run.ts`): `fetch` wrapped in evlog request logs (user tagged, invitation tokens redacted) plus the `scheduled` cron and `queue` consumer from `src/worker-handlers.ts` |
+| `src/services/invitation-queue.ts` | Enqueues unsent invitations and emails them from the queue, one at a time |
+| `scripts/seed-employees.ts` | `pnpm seed:employees <csv>`: HR list to `packages/db/seed/employees.sql` |
 
 ## Commands
 
@@ -31,6 +33,7 @@ TanStack Start app (React 19, TanStack Router, Query, Form) built with Vite and 
 ## Gotchas
 
 - Server env comes from Worker bindings (`cloudflare:workers`), not `process.env`. Bindings are declared in `packages/infra/alchemy.run.ts`.
+- There is no Nitro: Alchemy builds the Worker from `src/worker.ts`, so request-level hooks go there, not in a Nitro plugin.
 - `cloudflare:workers` is marked external in the Vite build; it only resolves inside workerd.
 
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._

@@ -6,18 +6,12 @@ import {
   createRootRouteWithContext,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { createMiddleware } from "@tanstack/react-start";
-import { evlogErrorHandler } from "evlog/nitro/v3";
 
 import appCss from "../index.css?url";
 
 export type RouterAppContext = Record<string, never>;
 
 export const Route = createRootRouteWithContext<RouterAppContext>()({
-  server: {
-    middleware: [createMiddleware().server(evlogErrorHandler)],
-  },
-
   head: () => ({
     meta: [
       {

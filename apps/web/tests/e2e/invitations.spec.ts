@@ -1,4 +1,10 @@
-import { confirmAction, invitationLink, invite, login } from "./actions";
+import {
+  confirmAction,
+  invitationLink,
+  invite,
+  login,
+  toastMessage,
+} from "./actions";
 import { expect, test } from "./fixtures";
 
 test.beforeEach(async ({ app, page }) => {
@@ -32,7 +38,7 @@ test("cancel does not create an invitation and duplicate email cannot send anoth
     .getByRole("button", { name: "Enviar invitación", exact: true })
     .click();
   await expect(
-    page.getByText("Ya existe una invitación activa para este correo.")
+    toastMessage(page, "Ya existe una invitación activa para este correo.")
   ).toBeVisible();
   expect(await app.getMail()).toHaveLength(2);
   expect(
@@ -178,7 +184,8 @@ test("failed resend restores old link and failed reactivation remains revoked", 
   await app.failDelivery(true);
   await confirmAction(page, "Reenviar");
   await expect(
-    page.getByText(
+    toastMessage(
+      page,
       "La invitación se guardó, pero no se pudo enviar el correo. Intenta reenviarla."
     )
   ).toBeVisible();
@@ -197,7 +204,8 @@ test("failed resend restores old link and failed reactivation remains revoked", 
     await page.getByRole("tab", { name: /Revocadas/u }).click();
     await confirmAction(page, "Reactivar");
     await expect(
-      page.getByText(
+      toastMessage(
+        page,
         "No se pudo enviar el correo, así que la invitación sigue revocada."
       )
     ).toBeVisible();
@@ -234,7 +242,8 @@ test("revoked email must be reactivated instead of creating a second invitation"
     .getByRole("button", { name: "Enviar invitación", exact: true })
     .click();
   await expect(
-    page.getByText(
+    toastMessage(
+      page,
       "Este correo tiene una invitación revocada. Reactívala desde la pestaña Revocadas."
     )
   ).toBeVisible();
@@ -269,7 +278,9 @@ test("literal wildcard search stays out of request URLs and tabs follow filtered
         !url.includes("literal@example.com")
     )
   ).toBe(true);
-  expect(page.url()).not.toContain("50");
+  // The random port can contain "50", so only the path and query count.
+  const { pathname, search } = new URL(page.url());
+  expect(`${pathname}${search}`).not.toContain("50");
   await confirmAction(page, "Revocar", "Percent 50%_ Employee");
   await page.getByRole("tab", { name: /Revocadas/u }).click();
   await expect(
