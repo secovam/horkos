@@ -31,67 +31,85 @@ export default function MagicLinkForm() {
   });
 
   return (
-    <div className="mx-auto mt-10 w-full max-w-md p-6">
-      <h1 className="mb-6 text-center text-3xl font-bold">Horkos</h1>
-      {emailSent ? (
-        <Card>
-          <CardContent>
-            <output className="block text-center">
-              Hemos enviado un enlace mágico a tu correo electrónico. Haz clic
-              en el enlace para iniciar sesión automáticamente. Puedes cerrar
-              esta página.
-            </output>
-          </CardContent>
-        </Card>
-      ) : (
-        <form
-          className="space-y-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            form.handleSubmit();
-          }}
-        >
-          <form.Field name="email">
-            {(field) => (
+    <div className="mx-6 flex w-full max-w-md items-center py-10">
+      <Card className="w-full">
+        <CardContent>
+          <div className="flex flex-col gap-6 py-8 sm:py-10">
+            <header className="flex flex-col items-center gap-5 text-center">
+              <img
+                alt="Secovam Capital Humano"
+                className="h-auto w-56 max-w-full"
+                src="/logo-secovam.png"
+              />
               <div className="space-y-2">
-                <Label htmlFor={field.name}>Correo electrónico</Label>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                />
-                {field.state.meta.errors.map((error) => (
-                  <p key={error?.message} className="text-destructive">
-                    {error?.message}
-                  </p>
-                ))}
+                <h1 className="text-foreground text-2xl font-semibold">
+                  Acceso para colaboradores
+                </h1>
+                <p className="text-muted-foreground">
+                  Ingresa tu correo electrónico y te enviaremos un enlace para
+                  iniciar sesión.
+                </p>
               </div>
-            )}
-          </form.Field>
-          <form.Subscribe
-            selector={(state) => ({
-              canSubmit: state.canSubmit,
-              isSubmitting: state.isSubmitting,
-            })}
-          >
-            {({ canSubmit, isSubmitting }) => (
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={!canSubmit || isSubmitting}
+            </header>
+            {emailSent ? (
+              <output className="text-center text-sm">
+                Hemos enviado un enlace mágico a tu correo electrónico. Abre el
+                enlace para iniciar sesión. Puedes cerrar esta página.
+              </output>
+            ) : (
+              <form
+                className="space-y-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  form.handleSubmit();
+                }}
               >
-                {isSubmitting ? "Enviando…" : "Enviar enlace"}
-              </Button>
+                <form.Field name="email">
+                  {(field) => (
+                    <div className="space-y-2">
+                      <Label htmlFor={field.name}>Correo electrónico</Label>
+                      <Input
+                        id={field.name}
+                        name={field.name}
+                        type="email"
+                        autoComplete="email"
+                        required
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(event) =>
+                          field.handleChange(event.target.value)
+                        }
+                      />
+                      {field.state.meta.errors.map((error) => (
+                        <p key={error?.message} className="text-destructive">
+                          {error?.message}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </form.Field>
+                <form.Subscribe
+                  selector={(state) => ({
+                    canSubmit: state.canSubmit,
+                    isSubmitting: state.isSubmitting,
+                  })}
+                >
+                  {({ canSubmit, isSubmitting }) => (
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={!canSubmit || isSubmitting}
+                    >
+                      {isSubmitting ? "Enviando…" : "Enviar enlace"}
+                    </Button>
+                  )}
+                </form.Subscribe>
+              </form>
             )}
-          </form.Subscribe>
-        </form>
-      )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
