@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import {
   MAX_DOCUMENT_BYTES,
   detectDocumentType,
-  documentFileError,
+  documentFileSchema,
   employeeObjectKey,
   submissionSchema,
 } from "./submission";
@@ -40,11 +40,20 @@ describe("detectDocumentType", () => {
   });
 });
 
-describe("documentFileError", () => {
-  test("accepts sizes up to the limit and rejects empty or larger files", () => {
-    expect(documentFileError({ size: MAX_DOCUMENT_BYTES })).toBeNull();
-    expect(documentFileError({ size: 0 })).not.toBeNull();
-    expect(documentFileError({ size: MAX_DOCUMENT_BYTES + 1 })).not.toBeNull();
+function sized(size: number) {
+  return new File([new Uint8Array(size)], "a.pdf");
+}
+
+describe("documentFileSchema", () => {
+  test("accepts sizes up to the limit and rejects empty, larger or missing files", () => {
+    expect(
+      documentFileSchema.safeParse(sized(MAX_DOCUMENT_BYTES)).success
+    ).toBe(true);
+    expect(documentFileSchema.safeParse(sized(0)).success).toBe(false);
+    expect(
+      documentFileSchema.safeParse(sized(MAX_DOCUMENT_BYTES + 1)).success
+    ).toBe(false);
+    expect(documentFileSchema.safeParse(null).success).toBe(false);
   });
 });
 

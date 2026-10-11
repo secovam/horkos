@@ -50,17 +50,13 @@ export function detectDocumentType(bytes: Uint8Array) {
   return match?.contentType ?? null;
 }
 
-export function documentFileError(file: { size: number }) {
-  if (file.size === 0) {
-    return "El archivo está vacío.";
-  }
-
-  if (file.size > MAX_DOCUMENT_BYTES) {
-    return "El archivo pesa más de 10 MB.";
-  }
-
-  return null;
-}
+export const documentFileSchema = z
+  .instanceof(File, { error: "Sube este documento." })
+  .refine((file) => file.size > 0, "El archivo está vacío.")
+  .refine(
+    (file) => file.size <= MAX_DOCUMENT_BYTES,
+    "El archivo pesa más de 10 MB."
+  );
 
 function required(label: string) {
   return z
@@ -107,3 +103,11 @@ export const submissionSchema = z.object({
 export type SubmissionInput = z.input<typeof submissionSchema>;
 
 export type SubmissionFields = z.output<typeof submissionSchema>;
+
+export const submissionFormSchema = submissionSchema.extend({
+  files: z.object({
+    tax_status: documentFileSchema,
+    imss: documentFileSchema,
+    proof_of_address: documentFileSchema,
+  }),
+});
