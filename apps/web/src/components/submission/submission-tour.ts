@@ -85,7 +85,7 @@ export function useSubmissionTour() {
       stagePadding: 8,
       stageRadius: 12,
       animate,
-      smoothScroll: animate,
+      smoothScroll: false,
       allowClose: true,
       showProgress: true,
       progressText: "{{current}} de {{total}}",

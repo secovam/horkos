@@ -336,3 +336,48 @@ test("employee gets a guided tour once on a phone and can replay it", async ({
     await employee.close();
   }
 });
+
+test("on a desktop the tour sits beside each section after scrolling to it", async ({
+  app,
+  browser,
+}) => {
+  const link = await invitationLink(app, 1);
+
+  const employee = await browser.newContext({
+    viewport: { width: 1440, height: 800 },
+  });
+
+  try {
+    const desktop = await employee.newPage();
+    const popover = tourPopover(desktop);
+
+    await desktop.goto(link);
+    await expect(popover).toContainText("1 de 5");
+
+    for (const [step, anchor] of [
+      [2, "documents"],
+      [3, "personal"],
+      [4, "address"],
+    ] as const) {
+      // oxlint-disable-next-line no-await-in-loop -- Steps are walked in order like a person would.
+      await popover.getByRole("button", { name: "Siguiente" }).click();
+      // oxlint-disable-next-line no-await-in-loop -- Each step is checked before moving on.
+      await expect(popover).toContainText(`${step} de 5`);
+      // oxlint-disable-next-line no-await-in-loop -- Each step is checked before moving on.
+      await expect(async () => {
+        const box = await popover.boundingBox();
+
+        const section = await desktop
+          .locator(`[data-tour="${anchor}"]`)
+          .boundingBox();
+
+        expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(
+          section?.x ?? 0
+        );
+        expect(Math.abs((box?.y ?? 0) - (section?.y ?? 0))).toBeLessThan(16);
+      }).toPass();
+    }
+  } finally {
+    await employee.close();
+  }
+});
