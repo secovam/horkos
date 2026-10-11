@@ -15,6 +15,10 @@ import { useForm } from "@tanstack/react-form";
 import type { AnyFieldApi } from "@tanstack/react-form";
 import type { ComponentProps } from "react";
 
+import {
+  tourAnchor,
+  useSubmissionTour,
+} from "@/components/submission/submission-tour";
 import { submitInvitation } from "@/functions/employee-invitation";
 import {
   DOCUMENT_ACCEPT,
@@ -105,8 +109,8 @@ const ADDRESS_FIELDS: readonly TextFieldConfig[] = [
 ];
 
 const TEXT_SECTIONS = [
-  { legend: "Datos personales", fields: PERSONAL_FIELDS },
-  { legend: "Domicilio", fields: ADDRESS_FIELDS },
+  { legend: "Datos personales", anchor: "personal", fields: PERSONAL_FIELDS },
+  { legend: "Domicilio", anchor: "address", fields: ADDRESS_FIELDS },
 ] as const;
 
 function TextInputField({
@@ -158,6 +162,8 @@ export function SubmissionForm({
   employeeName: string;
   onSubmitted: () => void;
 }) {
+  const startTour = useSubmissionTour();
+
   const form = useForm({
     defaultValues: {
       fullName: employeeName,
@@ -222,17 +228,22 @@ export function SubmissionForm({
         form.handleSubmit();
       }}
     >
-      <header className="flex flex-col gap-2">
-        <h1 className="text-primary text-xl font-semibold text-balance">
-          Completa tu información
-        </h1>
-        <p className="text-muted-foreground text-pretty">
-          Sube tus documentos y revisa tus datos. Recursos Humanos los
-          confirmará antes de preparar tu contrato.
-        </p>
+      <header className="flex flex-col items-start gap-2">
+        <div className="flex flex-col gap-2" {...tourAnchor("welcome")}>
+          <h1 className="text-primary text-xl font-semibold text-balance">
+            Completa tu información
+          </h1>
+          <p className="text-muted-foreground text-pretty">
+            Sube tus documentos y revisa tus datos. Recursos Humanos los
+            confirmará antes de preparar tu contrato.
+          </p>
+        </div>
+        <Button type="button" variant="secondary" onClick={startTour}>
+          ¿Cómo lleno esto?
+        </Button>
       </header>
 
-      <Card>
+      <Card {...tourAnchor("documents")}>
         <CardContent>
           <FieldSet>
             <FieldLegend>Documentos</FieldLegend>
@@ -280,8 +291,8 @@ export function SubmissionForm({
         </CardContent>
       </Card>
 
-      {TEXT_SECTIONS.map(({ legend, fields }) => (
-        <Card key={legend}>
+      {TEXT_SECTIONS.map(({ legend, anchor, fields }) => (
+        <Card key={legend} {...tourAnchor(anchor)}>
           <CardContent>
             <FieldSet>
               <FieldLegend>{legend}</FieldLegend>
@@ -299,7 +310,12 @@ export function SubmissionForm({
 
       <form.Subscribe selector={(state) => state.isSubmitting}>
         {(isSubmitting) => (
-          <Button type="submit" size="lg" disabled={isSubmitting}>
+          <Button
+            type="submit"
+            size="lg"
+            disabled={isSubmitting}
+            {...tourAnchor("submit")}
+          >
             {isSubmitting ? "Enviando…" : "Enviar mi información"}
           </Button>
         )}
