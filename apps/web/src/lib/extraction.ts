@@ -8,6 +8,33 @@ export const EXTRACTION_WARNINGS = ["not_cfe_or_telmex"] as const;
 
 export type ExtractionWarning = (typeof EXTRACTION_WARNINGS)[number];
 
+export const EXTRACTION_STATUSES = [
+  "extracted",
+  "unreadable",
+  "failed",
+] as const;
+
+export type ExtractionStatus = (typeof EXTRACTION_STATUSES)[number];
+
+// What the employee's browser gets back: proposals only, never document text.
+export interface ExtractionResult {
+  status: ExtractionStatus;
+  fields: ExtractedFields;
+  warnings: string[];
+}
+
+export const FAILED_EXTRACTION = {
+  status: "failed",
+  fields: {},
+  warnings: [],
+} satisfies ExtractionResult;
+
+export const UNREADABLE_EXTRACTION = {
+  status: "unreadable",
+  fields: {},
+  warnings: [],
+} satisfies ExtractionResult;
+
 export interface ParsedDocument {
   fields: ExtractedFields;
   warnings: ExtractionWarning[];

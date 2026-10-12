@@ -74,6 +74,7 @@ Do not commit implementation plans, research notes, or scratch files.
 ## Where code lives
 
 - `apps/web` - TanStack Start app: routes, server functions, env bindings. See [apps/web/AGENTS.md](apps/web/AGENTS.md).
+- `apps/extractor` - Node container that turns a PDF into text with LiteParse. Runs on Cloudflare Containers, reached only through the Worker. Parsing of that text into fields lives in `apps/web`.
 - `packages/db` - Drizzle schema and D1 migrations. See [packages/db/AGENTS.md](packages/db/AGENTS.md).
 - `packages/auth` - Better Auth setup. See [packages/auth/AGENTS.md](packages/auth/AGENTS.md).
 - `packages/ui` - shadcn components on Base UI. See [packages/ui/AGENTS.md](packages/ui/AGENTS.md).

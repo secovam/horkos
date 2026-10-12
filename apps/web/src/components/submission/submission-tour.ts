@@ -15,18 +15,20 @@ const TOUR_STEPS = [
   {
     anchor: "documents",
     title: "Documentos",
-    description: "Sube cada archivo en PDF, de hasta 10 MB.",
+    description:
+      "Sube cada archivo en PDF, de hasta 10 MB. Al subirlo, leemos el documento y llenamos tus datos por ti.",
   },
   {
     anchor: "personal",
     title: "Datos personales",
     description:
-      "Tu RFC, CURP y NSS vienen en tus constancias. Cópialos tal como aparecen.",
+      "Revisa lo que llenamos con tus constancias y corrige lo que haga falta. Si no pudimos leer un documento, escribe el dato a mano.",
   },
   {
     anchor: "address",
     title: "Domicilio",
-    description: "Escríbelo como aparece en tu comprobante de domicilio.",
+    description:
+      "Revisa que coincida con tu comprobante de domicilio y completa lo que falte.",
   },
   {
     anchor: "submit",

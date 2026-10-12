@@ -2,13 +2,13 @@
 
 ## Overview
 
-Alchemy (v2 beta, on Effect) stack that defines the Cloudflare resources: a D1 database, a private R2 bucket for employee documents (`DOCUMENTS`, no public or r2.dev access), the invitation email Queue with its throttled consumer, and the `web` Worker built from `apps/web` (with an every-minute cron that feeds the queue). The stack outputs `databaseName`.
+Alchemy (v2 beta, on Effect) stack that defines the Cloudflare resources: a D1 database, a private R2 bucket for employee documents (`DOCUMENTS`, no public or r2.dev access), the invitation email Queue with its throttled consumer, the `extractor` container (`apps/extractor`, built from its Dockerfile and bound to the Worker as the `EXTRACTOR` Durable Object, so it has no public URL; at most 3 `basic` instances) and the `web` Worker built from `apps/web` (with an every-minute cron that feeds the queue). The stack outputs `databaseName`.
 
 ## Key files
 
 | File | Owns |
 | --- | --- |
-| `alchemy.run.ts` | Resources and the Worker bindings (`DB`, `DOCUMENTS`, `INVITATION_QUEUE`, `EMAIL`, `EMAIL_FROM`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`) |
+| `alchemy.run.ts` | Resources and the Worker bindings (`DB`, `DOCUMENTS`, `INVITATION_QUEUE`, `EXTRACTOR`, `EMAIL`, `EMAIL_FROM`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`) |
 | `.env.schema` | Deploy secrets such as `ALCHEMY_PASSWORD` |
 
 ## Commands
@@ -20,6 +20,7 @@ Alchemy (v2 beta, on Effect) stack that defines the Cloudflare resources: a D1 d
 
 ## Conventions
 
+- The `Extractor` class (`@cloudflare/containers`) lives in `apps/web/src/extractor.ts` and is re-exported from `src/worker.ts`; `alchemy.run.ts` imports only its type. A deploy builds the image with Docker, so Docker must be running.
 - A new Worker env var goes in two places: `apps/web/.env.schema` and the `env` block in `alchemy.run.ts`.
 
 _Drafted by /audit from the repo, worth a quick human pass. Edit freely: once a line stops matching this draft, later runs treat it as curated and will flag rather than overwrite it._

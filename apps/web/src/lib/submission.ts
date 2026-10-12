@@ -97,11 +97,3 @@ export const submissionSchema = z.object({
 export type SubmissionInput = z.input<typeof submissionSchema>;
 
 export type SubmissionFields = z.output<typeof submissionSchema>;
-
-export const submissionFormSchema = submissionSchema.extend({
-  files: z.object({
-    tax_status: documentFileSchema,
-    imss: documentFileSchema,
-    proof_of_address: documentFileSchema,
-  }),
-});

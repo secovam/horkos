@@ -6,6 +6,8 @@ import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
 import "varlock/auto-load";
 
+import type { Extractor } from "../../apps/web/src/extractor.ts";
+
 const isDev = process.env.ALCHEMY_DEV === "true";
 
 const employeesSeed = "../../packages/db/seed/employees.sql";
@@ -26,6 +28,14 @@ export const documents = Cloudflare.R2.Bucket("documents");
 
 export const invitationQueue = Cloudflare.Queues.Queue("invitation-emails");
 
+// Reachable only through the `EXTRACTOR` Durable Object binding: the container has no public URL.
+export const extractor = Cloudflare.Container<Extractor>("extractor", {
+  context: `${import.meta.dirname}/../../apps/extractor`,
+  className: "Extractor",
+  instanceType: "basic",
+  maxInstances: 3,
+});
+
 export const web = Cloudflare.Website.Vite("web", {
   rootDir: "../../apps/web",
   main: "src/worker.ts",
@@ -36,6 +46,7 @@ export const web = Cloudflare.Website.Vite("web", {
     DB: db,
     DOCUMENTS: documents,
     INVITATION_QUEUE: invitationQueue,
+    EXTRACTOR: extractor,
     EMAIL: Cloudflare.Email.SendEmail("EMAIL"),
     EMAIL_FROM: Config.String("EMAIL_FROM"),
     BETTER_AUTH_SECRET: Config.Redacted("BETTER_AUTH_SECRET"),

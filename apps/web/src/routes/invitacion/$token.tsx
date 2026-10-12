@@ -63,6 +63,7 @@ function InvitationPage() {
           <SubmissionForm
             token={token}
             employeeName={invitation.employeeName}
+            initialDocuments={invitation.documents}
             onSubmitted={() => router.invalidate()}
           />
         ) : (

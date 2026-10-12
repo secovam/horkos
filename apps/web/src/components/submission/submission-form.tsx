@@ -12,19 +12,25 @@ import {
 import { Input } from "@horkos/ui/components/input";
 import { useForm } from "@tanstack/react-form";
 import type { AnyFieldApi } from "@tanstack/react-form";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { ComponentProps } from "react";
 
 import {
   tourAnchor,
   useSubmissionTour,
 } from "@/components/submission/submission-tour";
-import { submitInvitation } from "@/functions/employee-invitation";
+import {
+  submitInvitation,
+  uploadDocument,
+} from "@/functions/employee-invitation";
+import { submissionFormSchema, uploadsFromServer } from "@/lib/document-upload";
+import type { DocumentUpload, UploadedDocuments } from "@/lib/document-upload";
+import type { ExtractedFields } from "@/lib/extraction";
 import {
   DOCUMENT_ACCEPT,
   DOCUMENT_KINDS,
   DOCUMENT_KIND_LIST,
-  submissionFormSchema,
+  documentFileSchema,
 } from "@/lib/submission";
 import type { DocumentKind, SubmissionInput } from "@/lib/submission";
 
@@ -108,6 +114,10 @@ const ADDRESS_FIELDS: readonly TextFieldConfig[] = [
   },
 ];
 
+const TEXT_FIELD_NAMES = [...PERSONAL_FIELDS, ...ADDRESS_FIELDS].map(
+  ({ name }) => name
+);
+
 const TEXT_SECTIONS = [
   { legend: "Datos personales", anchor: "personal", fields: PERSONAL_FIELDS },
   { legend: "Domicilio", anchor: "address", fields: ADDRESS_FIELDS },
@@ -121,7 +131,11 @@ function TextInputField({
   autoCapitalize,
   maxLength,
   hint,
-}: Omit<TextFieldConfig, "name"> & { field: AnyFieldApi }) {
+  onEdit,
+}: Omit<TextFieldConfig, "name"> & {
+  field: AnyFieldApi;
+  onEdit: (name: keyof SubmissionInput) => void;
+}) {
   const invalid = field.state.meta.errors.length > 0;
 
   return (
@@ -139,7 +153,10 @@ function TextInputField({
         aria-invalid={invalid}
         value={field.state.value}
         onBlur={field.handleBlur}
-        onChange={(event) => field.handleChange(event.target.value)}
+        onChange={(event) => {
+          onEdit(field.name);
+          field.handleChange(event.target.value);
+        }}
       />
       {hint ? <FieldDescription>{hint}</FieldDescription> : null}
       <FieldError errors={field.state.meta.errors} />
@@ -147,23 +164,109 @@ function TextInputField({
   );
 }
 
-const NO_FILES: Record<DocumentKind, File | null> = {
-  tax_status: null,
-  imss: null,
-  proof_of_address: null,
-};
+const UPLOAD_ERROR_FALLBACK =
+  "No se pudo subir el documento. Inténtalo de nuevo.";
+
+// Only the fields a document proposed, in kind order, so a later document wins a shared field (CURP).
+function proposedValues(documents: UploadedDocuments) {
+  const proposed: ExtractedFields = {};
+
+  for (const kind of DOCUMENT_KIND_LIST) {
+    Object.assign(proposed, documents[kind]?.extraction.fields);
+  }
+
+  return proposed;
+}
+
+function describeUpload(kind: DocumentKind, upload: DocumentUpload) {
+  switch (upload.status) {
+    case "uploading": {
+      return "Subiendo y leyendo tu documento…";
+    }
+
+    case "uploaded": {
+      const { fields, warnings } = upload.extraction;
+
+      const read =
+        Object.keys(fields).length > 0
+          ? "Llenamos tus datos con este documento. Revísalos."
+          : "No pudimos leer este documento. Escribe tus datos a mano.";
+
+      const wrongIssuer = warnings.includes("not_cfe_or_telmex")
+        ? " No parece un recibo de CFE o Telmex. Sube uno de esos."
+        : "";
+
+      return `Ya subiste ${upload.fileName}. Elige otro para reemplazarlo. ${read}${wrongIssuer}`;
+    }
+
+    default: {
+      return DOCUMENT_KINDS[kind].hint;
+    }
+  }
+}
+
+function DocumentField({
+  field,
+  kind,
+  onPick,
+}: {
+  field: AnyFieldApi;
+  kind: DocumentKind;
+  onPick: (file: File) => void;
+}) {
+  const current: DocumentUpload = field.state.value;
+  const rejected = current.status === "rejected";
+  const invalid = rejected || field.state.meta.errors.length > 0;
+
+  return (
+    <Field data-invalid={invalid}>
+      <FieldLabel htmlFor={`file-${kind}`}>
+        {DOCUMENT_KINDS[kind].label}
+      </FieldLabel>
+      <Input
+        id={`file-${kind}`}
+        name={`file_${kind}`}
+        type="file"
+        accept={DOCUMENT_ACCEPT}
+        aria-invalid={invalid}
+        onBlur={field.handleBlur}
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+
+          if (file) {
+            onPick(file);
+          }
+        }}
+      />
+      <FieldDescription>{describeUpload(kind, current)}</FieldDescription>
+      {rejected ? <FieldError>{current.message}</FieldError> : null}
+      <FieldError errors={field.state.meta.errors} />
+    </Field>
+  );
+}
 
 export function SubmissionForm({
   token,
   employeeName,
+  initialDocuments,
   onSubmitted,
 }: {
   token: string;
   employeeName: string;
+  initialDocuments: UploadedDocuments;
   onSubmitted: () => void;
 }) {
   const startTour = useSubmissionTour();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Fields the person typed in. Prefills fill the rest and never count as an edit.
+  const edited = useRef(new Set<keyof SubmissionInput>());
+
+  // Newest upload per document, so a slow earlier answer cannot overwrite a later pick.
+  const latestUpload = useRef<Record<DocumentKind, number>>({
+    tax_status: 0,
+    imss: 0,
+    proof_of_address: 0,
+  });
 
   const form = useForm({
     defaultValues: {
@@ -178,7 +281,8 @@ export function SubmissionForm({
       postalCode: "",
       city: "",
       state: "",
-      files: NO_FILES,
+      ...proposedValues(initialDocuments),
+      files: uploadsFromServer(initialDocuments),
     },
     validators: { onSubmit: submissionFormSchema },
     onSubmitInvalid: () => {
@@ -187,20 +291,11 @@ export function SubmissionForm({
         ?.focus();
     },
     onSubmit: async ({ value }) => {
-      const { files, ...fields } = value;
       const body = new FormData();
       body.set("token", token);
 
-      for (const [name, text] of Object.entries(fields)) {
-        body.set(name, text);
-      }
-
-      for (const kind of DOCUMENT_KIND_LIST) {
-        const file = files[kind];
-
-        if (file) {
-          body.set(`file_${kind}`, file);
-        }
+      for (const name of TEXT_FIELD_NAMES) {
+        body.set(name, value[name]);
       }
 
       setSubmitError(null);
@@ -221,6 +316,67 @@ export function SubmissionForm({
       onSubmitted();
     },
   });
+
+  function markEdited(name: keyof SubmissionInput) {
+    edited.current.add(name);
+  }
+
+  function prefill(fields: ExtractedFields) {
+    for (const name of TEXT_FIELD_NAMES) {
+      const value = fields[name];
+
+      if (value && !edited.current.has(name)) {
+        form.setFieldValue(name, value);
+      }
+    }
+  }
+
+  async function upload(kind: DocumentKind, file: File) {
+    latestUpload.current[kind] += 1;
+    const attempt = latestUpload.current[kind];
+    const isStale = () => latestUpload.current[kind] !== attempt;
+
+    const valid = documentFileSchema.safeParse(file);
+
+    if (!valid.success) {
+      form.setFieldValue(`files.${kind}`, {
+        status: "rejected",
+        message: valid.error.issues[0].message,
+      });
+
+      return;
+    }
+
+    form.setFieldValue(`files.${kind}`, {
+      status: "uploading",
+      fileName: file.name,
+    });
+
+    const body = new FormData();
+    body.set("token", token);
+    body.set("kind", kind);
+    body.set("file", file);
+
+    try {
+      const uploaded = await uploadDocument({ data: body });
+
+      if (isStale()) {
+        return;
+      }
+
+      form.setFieldValue(`files.${kind}`, { status: "uploaded", ...uploaded });
+      prefill(uploaded.extraction.fields);
+    } catch (error) {
+      if (isStale()) {
+        return;
+      }
+
+      form.setFieldValue(`files.${kind}`, {
+        status: "rejected",
+        message: error instanceof Error ? error.message : UPLOAD_ERROR_FALLBACK,
+      });
+    }
+  }
 
   return (
     <form
@@ -255,36 +411,13 @@ export function SubmissionForm({
             <FieldGroup>
               {DOCUMENT_KIND_LIST.map((kind) => (
                 <form.Field key={kind} name={`files.${kind}`}>
-                  {(field) => {
-                    const invalid = field.state.meta.errors.length > 0;
-                    const { label, hint } = DOCUMENT_KINDS[kind];
-                    const chosen = field.state.value;
-
-                    return (
-                      <Field data-invalid={invalid}>
-                        <FieldLabel htmlFor={`file-${kind}`}>
-                          {label}
-                        </FieldLabel>
-                        <Input
-                          id={`file-${kind}`}
-                          name={`file_${kind}`}
-                          type="file"
-                          accept={DOCUMENT_ACCEPT}
-                          aria-invalid={invalid}
-                          onBlur={field.handleBlur}
-                          onChange={(event) =>
-                            field.handleChange(event.target.files?.[0] ?? null)
-                          }
-                        />
-                        <FieldDescription>
-                          {chosen
-                            ? `Archivo elegido: ${chosen.name}. Elige otro para reemplazarlo.`
-                            : hint}
-                        </FieldDescription>
-                        <FieldError errors={field.state.meta.errors} />
-                      </Field>
-                    );
-                  }}
+                  {(field) => (
+                    <DocumentField
+                      field={field}
+                      kind={kind}
+                      onPick={(file) => upload(kind, file)}
+                    />
+                  )}
                 </form.Field>
               ))}
             </FieldGroup>
@@ -300,7 +433,13 @@ export function SubmissionForm({
               <FieldGroup>
                 {fields.map(({ name, ...config }) => (
                   <form.Field key={name} name={name}>
-                    {(field) => <TextInputField field={field} {...config} />}
+                    {(field) => (
+                      <TextInputField
+                        field={field}
+                        onEdit={markEdited}
+                        {...config}
+                      />
+                    )}
                   </form.Field>
                 ))}
               </FieldGroup>

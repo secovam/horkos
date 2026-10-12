@@ -1,54 +1,51 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Browser, Locator, Page } from "@playwright/test";
 
 import { confirmAction, invitationLink, invite, login } from "./actions";
 import { expect, test } from "./fixtures";
+import { EXTRACTOR_FAILURE_MARKER } from "./runtime";
 import type { LocalApp } from "./runtime";
 
-const PDF = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n");
+// The stand-in extractor returns whatever follows the header line as the document text.
+function pdf(text = "") {
+  return Buffer.from(`%PDF-1.4\n${text}`);
+}
+
+function pdfFile(name: string, text = "") {
+  return { name, mimeType: "application/pdf", buffer: pdf(text) };
+}
 
 const PNG = Buffer.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x00,
 ]);
 
-const FIELDS = {
-  RFC: "xaxx010101ab1",
-  CURP: "xexx010101hnerxx08",
-  "Número de seguridad social (NSS)": "12345678901",
-  Calle: "Calle Falsa",
-  "Número exterior": "123",
-  Colonia: "Centro",
-  "Código postal": "01000",
+const SAT_TEXT = `| RFC: | XAXX010101AB1 |
+| CURP: | XEXX010101HNERXX08 |
+| Nombre (s): | MARIA |
+| Primer Apellido: | FICTICIA |
+| Segundo Apellido: | PRUEBA |`;
+
+const IMSS_TEXT = `Seguridad Social 12345678901
+Curp XEXX010101HNERXX08`;
+
+const CFE_TEXT = `COMISIÓN FEDERAL DE ELECTRICIDAD
+###### CALLE FALSA 123 CENTRO C.P. 01000`;
+
+const LABELS = {
+  taxStatus: "Constancia de situación fiscal",
+  imss: "Constancia del IMSS (NSS)",
+  proofOfAddress: "Comprobante de domicilio",
+} as const;
+
+const FILLED_BY_HAND = {
   "Municipio o alcaldía": "Benito Juárez",
   Estado: "Ciudad de México",
 } as const;
 
-async function fillFields(page: Page) {
-  for (const [label, value] of Object.entries(FIELDS)) {
+async function fillByHand(page: Page) {
+  for (const [label, value] of Object.entries(FILLED_BY_HAND)) {
     // oxlint-disable-next-line no-await-in-loop -- Fields are filled in reading order like a person would.
     await page.getByLabel(label, { exact: true }).fill(value);
   }
-}
-
-const VALID_TAX_STATUS = {
-  name: "constancia.pdf",
-  mimeType: "application/pdf",
-  buffer: PDF,
-};
-
-async function attachDocuments(page: Page, taxStatus = VALID_TAX_STATUS) {
-  await page
-    .getByLabel("Constancia de situación fiscal")
-    .setInputFiles(taxStatus);
-  await page.getByLabel("Constancia del IMSS (NSS)").setInputFiles({
-    name: "imss.pdf",
-    mimeType: "application/pdf",
-    buffer: PDF,
-  });
-  await page.getByLabel("Comprobante de domicilio").setInputFiles({
-    name: "domicilio.pdf",
-    mimeType: "application/pdf",
-    buffer: PDF,
-  });
 }
 
 function tourPopover(page: Page) {
@@ -79,206 +76,470 @@ function count(app: LocalApp, table: string) {
     .first("count");
 }
 
+function row(app: LocalApp, sql: string) {
+  return app.db.prepare(sql).first();
+}
+
+async function openForm(browser: Browser, app: LocalApp) {
+  const context = await browser.newContext({ viewport: DESKTOP });
+  const employee = await context.newPage();
+
+  await employee.goto(await invitationLink(app, 1));
+  await expect(
+    employee.getByRole("heading", { name: "Completa tu información" })
+  ).toBeVisible();
+  await dismissTour(employee);
+
+  return { context, employee };
+}
+
 test.beforeEach(async ({ app, page }) => {
   await login(app, page);
   await page.getByRole("link", { name: "Invitaciones", exact: true }).click();
   await invite(page);
 });
 
-test("employee submits documents and data from a computer; HR sees it received", async ({
+test("employee uploads documents, reviews the prefilled data and submits; HR sees it received", async ({
   app,
   page,
   browser,
 }) => {
-  const link = await invitationLink(app, 1);
-
-  const employee = await browser.newContext({
-    viewport: DESKTOP,
-  });
+  const { context, employee } = await openForm(browser, app);
 
   try {
-    const desktop = await employee.newPage();
-    await desktop.goto(link);
-    await expect(
-      desktop.getByRole("heading", { name: "Completa tu información" })
-    ).toBeVisible();
-    await dismissTour(desktop);
-    await expect(desktop.getByLabel("Nombre completo")).toHaveValue(
+    await expect(employee.getByLabel("Nombre completo")).toHaveValue(
       "Verification Employee"
     );
 
-    await desktop
+    await employee
       .getByRole("button", { name: "Enviar mi información" })
       .click();
     await expect(
-      desktop.getByText("Sube este documento.").first()
-    ).toBeVisible();
-    await expect(
-      desktop.getByText("El código postal tiene 5 dígitos.")
+      employee.getByText("Sube este documento.").first()
     ).toBeVisible();
     expect(await count(app, "submission")).toBe(0);
 
-    await fillFields(desktop);
-
-    for (const rejected of [
-      {
-        name: "constancia.pdf",
-        mimeType: "application/pdf",
-        buffer: Buffer.from("<script>not a pdf</script>"),
-      },
-      { name: "constancia.png", mimeType: "image/png", buffer: PNG },
-    ]) {
-      // oxlint-disable-next-line no-await-in-loop -- Each rejection is checked before the next attempt.
-      await attachDocuments(desktop, rejected);
-      // oxlint-disable-next-line no-await-in-loop -- Each rejection is checked before the next attempt.
-      await desktop
-        .getByRole("button", { name: "Enviar mi información" })
-        .click();
-      // oxlint-disable-next-line no-await-in-loop -- Each rejection is checked before the next attempt.
-      await expect(
-        desktop.getByRole("alert").filter({
-          hasText: "Constancia de situación fiscal: sube un archivo PDF.",
-        })
-      ).toBeVisible();
-      // oxlint-disable-next-line no-await-in-loop -- Each rejection is checked before the next attempt.
-      expect(await count(app, "submission")).toBe(0);
-      // oxlint-disable-next-line no-await-in-loop -- Each rejection is checked before the next attempt.
-      expect(await app.listObjects()).toHaveLength(0);
-    }
-
-    await attachDocuments(desktop);
-    await expect(desktop.getByLabel("RFC", { exact: true })).toHaveValue(
-      "xaxx010101ab1"
+    await employee
+      .getByLabel(LABELS.taxStatus)
+      .setInputFiles(pdfFile("sat.pdf", SAT_TEXT));
+    await expect(employee.getByLabel("Nombre completo")).toHaveValue(
+      "Maria Ficticia Prueba"
     );
-    await desktop.screenshot({
-      path: test.info().outputPath("form-filled.png"),
+    await expect(employee.getByLabel("RFC", { exact: true })).toHaveValue(
+      "XAXX010101AB1"
+    );
+    await expect(employee.getByLabel("CURP")).toHaveValue("XEXX010101HNERXX08");
+    await expect(
+      employee.getByText("Llenamos tus datos con este documento. Revísalos.")
+    ).toBeVisible();
+    expect(await app.listObjects()).toHaveLength(1);
+
+    await employee.getByLabel("RFC", { exact: true }).fill("xaxx010101ab2");
+    await employee.getByLabel("Calle", { exact: true }).fill("Calle Escrita");
+
+    await employee
+      .getByLabel(LABELS.imss)
+      .setInputFiles(pdfFile("imss.pdf", IMSS_TEXT));
+    await expect(
+      employee.getByLabel("Número de seguridad social (NSS)")
+    ).toHaveValue("12345678901");
+
+    await employee
+      .getByLabel(LABELS.proofOfAddress)
+      .setInputFiles(pdfFile("cfe.pdf", CFE_TEXT));
+    await expect(employee.getByLabel("Código postal")).toHaveValue("01000");
+    await expect(employee.getByLabel("Colonia")).toHaveValue("CENTRO");
+    await expect(
+      employee.getByText("No parece un recibo de CFE o Telmex.")
+    ).toBeHidden();
+
+    await expect(employee.getByLabel("RFC", { exact: true })).toHaveValue(
+      "xaxx010101ab2"
+    );
+    await expect(employee.getByLabel("Calle", { exact: true })).toHaveValue(
+      "Calle Escrita"
+    );
+
+    await fillByHand(employee);
+    await employee.screenshot({
+      path: test.info().outputPath("form-prefilled.png"),
       fullPage: true,
     });
-    await desktop
+    await employee
       .getByRole("button", { name: "Enviar mi información" })
       .click();
     await expect(
-      desktop.getByRole("heading", { name: "Recibimos tu información" })
+      employee.getByRole("heading", { name: "Recibimos tu información" })
     ).toBeVisible();
-    await desktop.screenshot({
-      path: test.info().outputPath("submitted.png"),
-      fullPage: true,
-    });
 
-    const stored = await app.db
-      .prepare("SELECT rfc, curp, nss, full_name, int_number FROM submission")
-      .first();
-
-    expect(stored).toEqual({
-      rfc: "XAXX010101AB1",
+    expect(await row(app, "SELECT * FROM submission")).toMatchObject({
+      full_name: "Maria Ficticia Prueba",
+      rfc: "XAXX010101AB2",
       curp: "XEXX010101HNERXX08",
       nss: "12345678901",
-      full_name: "Verification Employee",
+      street: "Calle Escrita",
+      ext_number: "123",
       int_number: null,
+      suburb: "CENTRO",
+      postal_code: "01000",
+      city: "Benito Juárez",
+      state: "Ciudad de México",
     });
-    expect(
-      await app.db
-        .prepare("SELECT submitted_at FROM invitation")
-        .first("submitted_at")
-    ).not.toBeNull();
-
-    const { results: documents } = await app.db
-      .prepare(
-        "SELECT kind, object_key, content_type FROM document ORDER BY kind"
-      )
-      .all();
 
     const invitationId = await app.db
       .prepare("SELECT id FROM invitation")
       .first("id");
 
+    const { results: documents } = await app.db
+      .prepare(
+        "SELECT kind, object_key, file_name, content_type FROM document ORDER BY kind"
+      )
+      .all();
+
     expect(documents).toEqual([
       {
         kind: "imss",
         object_key: `invitations/${invitationId}/employee/imss`,
+        file_name: "imss.pdf",
         content_type: "application/pdf",
       },
       {
         kind: "proof_of_address",
         object_key: `invitations/${invitationId}/employee/proof_of_address`,
+        file_name: "cfe.pdf",
         content_type: "application/pdf",
       },
       {
         kind: "tax_status",
         object_key: `invitations/${invitationId}/employee/tax_status`,
+        file_name: "sat.pdf",
         content_type: "application/pdf",
       },
     ]);
-    expect(await app.listObjects()).toEqual(
-      documents.map((row) => row.object_key)
-    );
+    const objectKeys = await app.listObjects();
 
-    const pdf = await app.getObject(
+    const satObject = await app.getObject(
       `invitations/${invitationId}/employee/tax_status`
     );
 
-    expect(pdf?.bytes).toEqual(new Uint8Array(PDF));
+    expect(objectKeys).toEqual(
+      documents.map((document) => document.object_key)
+    );
+    expect(satObject?.bytes).toEqual(new Uint8Array(pdf(SAT_TEXT)));
 
-    await desktop.reload();
+    const { results: extractions } = await app.db
+      .prepare(
+        "SELECT kind, status, fields, warnings FROM extraction ORDER BY kind"
+      )
+      .all();
+
+    expect(
+      extractions.map(({ kind, status, fields, warnings }) => ({
+        kind,
+        status,
+        fields: JSON.parse(String(fields)),
+        warnings: JSON.parse(String(warnings)),
+      }))
+    ).toEqual([
+      {
+        kind: "imss",
+        status: "extracted",
+        fields: { nss: "12345678901", curp: "XEXX010101HNERXX08" },
+        warnings: [],
+      },
+      {
+        kind: "proof_of_address",
+        status: "extracted",
+        fields: {
+          street: "CALLE FALSA",
+          extNumber: "123",
+          suburb: "CENTRO",
+          postalCode: "01000",
+        },
+        warnings: [],
+      },
+      {
+        kind: "tax_status",
+        status: "extracted",
+        fields: {
+          fullName: "Maria Ficticia Prueba",
+          rfc: "XAXX010101AB1",
+          curp: "XEXX010101HNERXX08",
+        },
+        warnings: [],
+      },
+    ]);
+
+    await employee.reload();
     await expect(
-      desktop.getByRole("heading", { name: "Recibimos tu información" })
+      employee.getByRole("heading", { name: "Recibimos tu información" })
     ).toBeVisible();
-    await expect(desktop.getByLabel("RFC", { exact: true })).toBeHidden();
 
     await page.reload();
     await expect(
       page.getByRole("row").filter({ hasText: "employee@example.com" })
     ).toContainText("Recibida");
   } finally {
-    await employee.close();
+    await context.close();
   }
 });
 
-test("a revoked link cannot submit, even from an already open form", async ({
+test("a returning employee finds the uploaded document and can replace it", async ({
+  app,
+  browser,
+}) => {
+  const { context, employee } = await openForm(browser, app);
+
+  try {
+    await employee
+      .getByLabel(LABELS.taxStatus)
+      .setInputFiles(pdfFile("sat.pdf", SAT_TEXT));
+    await expect(employee.getByLabel("RFC", { exact: true })).toHaveValue(
+      "XAXX010101AB1"
+    );
+    await employee.getByLabel("Calle", { exact: true }).fill("No se guarda");
+
+    await employee.reload();
+    await expect(
+      employee.getByText("Ya subiste sat.pdf. Elige otro para reemplazarlo.")
+    ).toBeVisible();
+    await expect(employee.getByLabel("RFC", { exact: true })).toHaveValue(
+      "XAXX010101AB1"
+    );
+    await expect(employee.getByLabel("Nombre completo")).toHaveValue(
+      "Maria Ficticia Prueba"
+    );
+    await expect(employee.getByLabel("Calle", { exact: true })).toHaveValue("");
+
+    const replacement = SAT_TEXT.replace("XAXX010101AB1", "XBXX020202CD3");
+
+    await employee
+      .getByLabel(LABELS.taxStatus)
+      .setInputFiles(pdfFile("sat-nuevo.pdf", replacement));
+    await expect(employee.getByText("Ya subiste sat-nuevo.pdf.")).toBeVisible();
+    await expect(employee.getByLabel("RFC", { exact: true })).toHaveValue(
+      "XBXX020202CD3"
+    );
+
+    const invitationId = await app.db
+      .prepare("SELECT id FROM invitation")
+      .first("id");
+
+    const key = `invitations/${invitationId}/employee/tax_status`;
+
+    const replaced = await app.getObject(key);
+
+    expect(await app.listObjects()).toEqual([key]);
+    expect(replaced?.bytes).toEqual(new Uint8Array(pdf(replacement)));
+    expect(
+      await app.db.prepare("SELECT file_name FROM document").all()
+    ).toMatchObject({
+      results: [{ file_name: "sat-nuevo.pdf" }],
+    });
+    expect(
+      await app.db.prepare("SELECT fields FROM extraction").all()
+    ).toMatchObject({
+      results: [{ fields: expect.stringContaining("XBXX020202CD3") }],
+    });
+  } finally {
+    await context.close();
+  }
+});
+
+test("unreadable and failed documents leave the fields empty; a wrong issuer only warns", async ({
+  app,
+  browser,
+}) => {
+  const { context, employee } = await openForm(browser, app);
+
+  const handWritten =
+    "No pudimos leer este documento. Escribe tus datos a mano.";
+
+  try {
+    await employee
+      .getByLabel(LABELS.taxStatus)
+      .setInputFiles(pdfFile("sat.pdf"));
+    await expect(employee.getByText(handWritten)).toBeVisible();
+
+    await employee
+      .getByLabel(LABELS.imss)
+      .setInputFiles(pdfFile("imss.pdf", EXTRACTOR_FAILURE_MARKER));
+    await expect(employee.getByText(handWritten)).toHaveCount(2);
+
+    await employee
+      .getByLabel(LABELS.proofOfAddress)
+      .setInputFiles(
+        pdfFile(
+          "agua.pdf",
+          "Recibo de agua\nCalle: Calle Falsa\nCódigo Postal: 01000"
+        )
+      );
+    await expect(
+      employee.getByText(
+        "No parece un recibo de CFE o Telmex. Sube uno de esos."
+      )
+    ).toBeVisible();
+    await expect(employee.getByLabel("Código postal")).toHaveValue("01000");
+
+    await expect(employee.getByLabel("RFC", { exact: true })).toHaveValue("");
+    await expect(
+      employee.getByLabel("Número de seguridad social (NSS)")
+    ).toHaveValue("");
+
+    const { results } = await app.db
+      .prepare(
+        "SELECT kind, status, fields, warnings FROM extraction ORDER BY kind"
+      )
+      .all();
+
+    expect(results).toEqual([
+      { kind: "imss", status: "failed", fields: "{}", warnings: "[]" },
+      {
+        kind: "proof_of_address",
+        status: "extracted",
+        fields: expect.any(String),
+        warnings: '["not_cfe_or_telmex"]',
+      },
+      {
+        kind: "tax_status",
+        status: "unreadable",
+        fields: "{}",
+        warnings: "[]",
+      },
+    ]);
+    expect(await app.listObjects()).toHaveLength(3);
+
+    await fillByHand(employee);
+    await employee.getByLabel("Número exterior").fill("123");
+    await employee.getByLabel("Colonia").fill("Centro");
+    await employee.getByLabel("RFC", { exact: true }).fill("XAXX010101AB1");
+    await employee.getByLabel("CURP").fill("XEXX010101HNERXX08");
+    await employee
+      .getByLabel("Número de seguridad social (NSS)")
+      .fill("12345678901");
+    await employee
+      .getByRole("button", { name: "Enviar mi información" })
+      .click();
+    await expect(
+      employee.getByRole("heading", { name: "Recibimos tu información" })
+    ).toBeVisible();
+  } finally {
+    await context.close();
+  }
+});
+
+test("a file that is not a PDF is refused on its field and nothing is stored", async ({
+  app,
+  browser,
+}) => {
+  const { context, employee } = await openForm(browser, app);
+
+  try {
+    await employee.getByLabel(LABELS.taxStatus).setInputFiles({
+      name: "constancia.png",
+      mimeType: "image/png",
+      buffer: PNG,
+    });
+    await expect(
+      employee.getByRole("alert").filter({ hasText: "Sube un archivo PDF." })
+    ).toBeVisible();
+
+    await employee.getByLabel(LABELS.imss).setInputFiles({
+      name: "grande.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.alloc(10 * 1024 * 1024 + 1),
+    });
+    await expect(
+      employee
+        .getByRole("alert")
+        .filter({ hasText: "El archivo pesa más de 10 MB." })
+    ).toBeVisible();
+
+    expect(await count(app, "document")).toBe(0);
+    expect(await count(app, "extraction")).toBe(0);
+    expect(await app.listObjects()).toHaveLength(0);
+  } finally {
+    await context.close();
+  }
+});
+
+test("submitting needs all three documents uploaded", async ({
+  app,
+  browser,
+}) => {
+  const { context, employee } = await openForm(browser, app);
+
+  try {
+    await employee
+      .getByLabel(LABELS.taxStatus)
+      .setInputFiles(pdfFile("sat.pdf", SAT_TEXT));
+    await expect(employee.getByLabel("RFC", { exact: true })).toHaveValue(
+      "XAXX010101AB1"
+    );
+    await employee
+      .getByLabel("Número de seguridad social (NSS)")
+      .fill("12345678901");
+    await fillByHand(employee);
+    await employee.getByLabel("Calle", { exact: true }).fill("Calle Falsa");
+    await employee.getByLabel("Número exterior").fill("123");
+    await employee.getByLabel("Colonia").fill("Centro");
+    await employee.getByLabel("Código postal").fill("01000");
+    await employee
+      .getByRole("button", { name: "Enviar mi información" })
+      .click();
+
+    await expect(
+      employee.getByText("Sube este documento.").first()
+    ).toBeVisible();
+    expect(await count(app, "submission")).toBe(0);
+  } finally {
+    await context.close();
+  }
+});
+
+test("a revoked link cannot upload or submit, even from an already open form", async ({
   app,
   page,
   browser,
 }) => {
-  const link = await invitationLink(app, 1);
-
-  const employee = await browser.newContext({
-    viewport: DESKTOP,
-  });
+  const { context, employee } = await openForm(browser, app);
 
   try {
-    const desktop = await employee.newPage();
-    await desktop.goto(link);
-    await expect(
-      desktop.getByRole("heading", { name: "Completa tu información" })
-    ).toBeVisible();
-    await dismissTour(desktop);
-    await fillFields(desktop);
-    await attachDocuments(desktop);
+    await employee
+      .getByLabel(LABELS.taxStatus)
+      .setInputFiles(pdfFile("sat.pdf", SAT_TEXT));
+    await expect(employee.getByLabel("RFC", { exact: true })).toHaveValue(
+      "XAXX010101AB1"
+    );
 
     await confirmAction(page, "Revocar");
     await expect(
       page.getByRole("button", { name: "Revocar: Verification Employee" })
     ).toBeHidden();
 
-    await desktop
+    const unavailable =
+      "Este enlace ya no está disponible. Pide uno nuevo a Recursos Humanos.";
+
+    await employee
+      .getByLabel(LABELS.imss)
+      .setInputFiles(pdfFile("imss.pdf", IMSS_TEXT));
+    await expect(
+      employee.getByRole("alert").filter({ hasText: unavailable })
+    ).toBeVisible();
+    expect(await count(app, "document")).toBe(1);
+    expect(await app.listObjects()).toHaveLength(1);
+
+    await employee
       .getByRole("button", { name: "Enviar mi información" })
       .click();
-    await expect(
-      desktop.getByRole("alert").filter({
-        hasText:
-          "Este enlace ya no está disponible. Pide uno nuevo a Recursos Humanos.",
-      })
-    ).toBeVisible();
     expect(await count(app, "submission")).toBe(0);
-    expect(await count(app, "document")).toBe(0);
-    expect(await app.listObjects()).toHaveLength(0);
 
-    await desktop.reload();
+    await employee.reload();
     await expect(
-      desktop.getByRole("heading", { name: "Este enlace no está disponible" })
+      employee.getByRole("heading", { name: "Este enlace no está disponible" })
     ).toBeVisible();
   } finally {
-    await employee.close();
+    await context.close();
   }
 });
 
