@@ -11,8 +11,9 @@ import {
   FieldSet,
 } from "@horkos/ui/components/field";
 import { Input } from "@horkos/ui/components/input";
-import { useForm } from "@tanstack/react-form";
+import { useForm, useStore } from "@tanstack/react-form";
 import type { AnyFieldApi } from "@tanstack/react-form";
+import { BotIcon } from "lucide-react";
 import { useRef, useState } from "react";
 import type { ComponentProps } from "react";
 
@@ -29,7 +30,11 @@ import {
   submissionFormSchema,
   uploadsFromServer,
 } from "@/lib/document-upload";
-import type { DocumentUpload, UploadedDocuments } from "@/lib/document-upload";
+import type {
+  DocumentUpload,
+  DocumentUploads,
+  UploadedDocuments,
+} from "@/lib/document-upload";
 import type { ExtractedFields } from "@/lib/extraction";
 import {
   DOCUMENT_ACCEPT,
@@ -154,16 +159,29 @@ function TextInputField({
   autoCapitalize,
   maxLength,
   hint,
+  extracted,
   onEdit,
 }: Omit<TextFieldConfig, "name"> & {
   field: AnyFieldApi;
+  extracted?: string;
   onEdit: (name: keyof SubmissionInput) => void;
 }) {
   const invalid = field.state.meta.errors.length > 0;
 
   return (
     <Field data-invalid={invalid}>
-      <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
+      <div className="flex items-center gap-2">
+        <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
+        {/* Only while the value is still what the document said, so a correction drops the badge. Hidden rather than unmounted: mounting inside a fieldset leaves Chromium with a stale, collapsed layout. */}
+        <span
+          hidden={extracted === undefined || field.state.value !== extracted}
+        >
+          <Badge variant="info">
+            <BotIcon data-icon="inline-start" />
+            Auto-extraído
+          </Badge>
+        </span>
+      </div>
       <Input
         id={field.name}
         name={field.name}
@@ -191,11 +209,15 @@ const UPLOAD_ERROR_FALLBACK =
   "No se pudo subir el documento. Inténtalo de nuevo.";
 
 // Only the fields a document proposed, in kind order, so a later document wins a shared field (CURP).
-function proposedValues(documents: UploadedDocuments) {
+function proposedValues(uploads: DocumentUploads) {
   const proposed: ExtractedFields = {};
 
   for (const kind of DOCUMENT_KIND_LIST) {
-    Object.assign(proposed, documents[kind]?.extraction.fields);
+    const upload = uploads[kind];
+
+    if (upload.status === "uploaded") {
+      Object.assign(proposed, upload.extraction.fields);
+    }
   }
 
   return proposed;
@@ -336,7 +358,7 @@ export function SubmissionForm({
       postalCode: "",
       city: "",
       state: "",
-      ...proposedValues(initialDocuments),
+      ...proposedValues(uploadsFromServer(initialDocuments)),
       files: uploadsFromServer(initialDocuments),
     },
     validators: { onSubmit: submissionFormSchema },
@@ -372,6 +394,10 @@ export function SubmissionForm({
     },
   });
 
+  const proposed = proposedValues(
+    useStore(form.store, (state) => state.values.files)
+  );
+
   function markEdited(name: keyof SubmissionInput) {
     edited.current.add(name);
   }
@@ -390,7 +416,12 @@ export function SubmissionForm({
     return (
       <form.Field key={name} name={name}>
         {(field) => (
-          <TextInputField field={field} onEdit={markEdited} {...config} />
+          <TextInputField
+            field={field}
+            extracted={proposed[name]}
+            onEdit={markEdited}
+            {...config}
+          />
         )}
       </form.Field>
     );

@@ -48,6 +48,13 @@ async function fillByHand(page: Page) {
   }
 }
 
+function extractedBadge(page: Page, label: string) {
+  return page
+    .locator('[data-slot="field"]')
+    .filter({ has: page.getByLabel(label, { exact: true }) })
+    .getByText("Auto-extraído");
+}
+
 function tourPopover(page: Page) {
   return page.locator(".driver-popover");
 }
@@ -154,8 +161,13 @@ test("employee uploads documents, reviews the prefilled data and submits; HR see
     ).toBeHidden();
     await expect(employee.getByLabel("RFC", { exact: true })).toBeEnabled();
 
+    await expect(extractedBadge(employee, "RFC")).toBeVisible();
+    await expect(extractedBadge(employee, "Código postal")).toBeVisible();
+    await expect(extractedBadge(employee, "Estado")).toBeHidden();
+
     await employee.getByLabel("RFC", { exact: true }).fill("xaxx010101ab2");
     await employee.getByLabel("Calle", { exact: true }).fill("Calle Escrita");
+    await expect(extractedBadge(employee, "RFC")).toBeHidden();
 
     for (const [label, file] of [
       [LABELS.taxStatus, pdfFile("sat.pdf", SAT_TEXT)],
