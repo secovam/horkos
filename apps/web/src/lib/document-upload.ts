@@ -34,6 +34,11 @@ export function uploadsFromServer(
   };
 }
 
+// The data fields wait for every document, so a late prefill never lands on top of what the person typed.
+export function allDocumentsRead(uploads: DocumentUploads) {
+  return Object.values(uploads).every(({ status }) => status === "uploaded");
+}
+
 const documentUploadSchema = z
   .custom<DocumentUpload>()
   .superRefine((upload, context) => {

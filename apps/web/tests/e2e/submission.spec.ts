@@ -119,6 +119,8 @@ test("employee uploads documents, reviews the prefilled data and submits; HR see
     ).toBeVisible();
     expect(await count(app, "submission")).toBe(0);
 
+    await expect(employee.getByLabel("Nombre completo")).toBeDisabled();
+
     await employee
       .getByLabel(LABELS.taxStatus)
       .setInputFiles(pdfFile("sat.pdf", SAT_TEXT));
@@ -133,9 +135,7 @@ test("employee uploads documents, reviews the prefilled data and submits; HR see
       employee.getByText("Llenamos tus datos con este documento. Revísalos.")
     ).toBeVisible();
     expect(await app.listObjects()).toHaveLength(1);
-
-    await employee.getByLabel("RFC", { exact: true }).fill("xaxx010101ab2");
-    await employee.getByLabel("Calle", { exact: true }).fill("Calle Escrita");
+    await expect(employee.getByLabel("RFC", { exact: true })).toBeDisabled();
 
     await employee
       .getByLabel(LABELS.imss)
@@ -152,6 +152,26 @@ test("employee uploads documents, reviews the prefilled data and submits; HR see
     await expect(
       employee.getByText("No parece un recibo de CFE o Telmex.")
     ).toBeHidden();
+    await expect(employee.getByLabel("RFC", { exact: true })).toBeEnabled();
+
+    await employee.getByLabel("RFC", { exact: true }).fill("xaxx010101ab2");
+    await employee.getByLabel("Calle", { exact: true }).fill("Calle Escrita");
+
+    for (const [label, file] of [
+      [LABELS.taxStatus, pdfFile("sat.pdf", SAT_TEXT)],
+      [LABELS.proofOfAddress, pdfFile("cfe.pdf", CFE_TEXT)],
+    ] as const) {
+      const reread = employee.waitForResponse(
+        (response) => response.request().method() === "POST"
+      );
+
+      // oxlint-disable-next-line no-await-in-loop -- Each document is read again before the next one.
+      await employee.getByLabel(label).setInputFiles(file);
+      // oxlint-disable-next-line no-await-in-loop -- Each document is read again before the next one.
+      await reread;
+    }
+
+    await expect(employee.getByLabel("RFC", { exact: true })).toBeEnabled();
 
     await expect(employee.getByLabel("RFC", { exact: true })).toHaveValue(
       "xaxx010101ab2"
@@ -297,6 +317,12 @@ test("a returning employee finds the uploaded document and can replace it", asyn
     await expect(employee.getByLabel("RFC", { exact: true })).toHaveValue(
       "XAXX010101AB1"
     );
+    await employee
+      .getByLabel(LABELS.imss)
+      .setInputFiles(pdfFile("imss.pdf", IMSS_TEXT));
+    await employee
+      .getByLabel(LABELS.proofOfAddress)
+      .setInputFiles(pdfFile("cfe.pdf"));
     await employee.getByLabel("Calle", { exact: true }).fill("No se guarda");
 
     await employee.reload();
@@ -310,6 +336,7 @@ test("a returning employee finds the uploaded document and can replace it", asyn
       "Maria Ficticia Prueba"
     );
     await expect(employee.getByLabel("Calle", { exact: true })).toHaveValue("");
+    await expect(employee.getByLabel("Calle", { exact: true })).toBeEnabled();
 
     const replacement = SAT_TEXT.replace("XAXX010101AB1", "XBXX020202CD3");
 
@@ -329,15 +356,19 @@ test("a returning employee finds the uploaded document and can replace it", asyn
 
     const replaced = await app.getObject(key);
 
-    expect(await app.listObjects()).toEqual([key]);
+    expect(await app.listObjects()).toHaveLength(3);
     expect(replaced?.bytes).toEqual(new Uint8Array(pdf(replacement)));
     expect(
-      await app.db.prepare("SELECT file_name FROM document").all()
+      await app.db
+        .prepare("SELECT file_name FROM document WHERE kind = 'tax_status'")
+        .all()
     ).toMatchObject({
       results: [{ file_name: "sat-nuevo.pdf" }],
     });
     expect(
-      await app.db.prepare("SELECT fields FROM extraction").all()
+      await app.db
+        .prepare("SELECT fields FROM extraction WHERE kind = 'tax_status'")
+        .all()
     ).toMatchObject({
       results: [{ fields: expect.stringContaining("XBXX020202CD3") }],
     });
@@ -463,7 +494,7 @@ test("a file that is not a PDF is refused on its field and nothing is stored", a
   }
 });
 
-test("submitting needs all three documents uploaded", async ({
+test("the data fields stay locked until all three documents are read", async ({
   app,
   browser,
 }) => {
@@ -473,25 +504,44 @@ test("submitting needs all three documents uploaded", async ({
     await employee
       .getByLabel(LABELS.taxStatus)
       .setInputFiles(pdfFile("sat.pdf", SAT_TEXT));
-    await expect(employee.getByLabel("RFC", { exact: true })).toHaveValue(
-      "XAXX010101AB1"
-    );
     await employee
-      .getByLabel("Número de seguridad social (NSS)")
-      .fill("12345678901");
-    await fillByHand(employee);
-    await employee.getByLabel("Calle", { exact: true }).fill("Calle Falsa");
-    await employee.getByLabel("Número exterior").fill("123");
-    await employee.getByLabel("Colonia").fill("Centro");
-    await employee.getByLabel("Código postal").fill("01000");
+      .getByLabel(LABELS.imss)
+      .setInputFiles(pdfFile("imss.pdf", IMSS_TEXT));
+    await expect(
+      employee.getByLabel("Número de seguridad social (NSS)")
+    ).toHaveValue("12345678901");
+    await expect(employee.getByLabel("Calle", { exact: true })).toBeDisabled();
+    await expect(
+      employee.getByText(
+        "Se habilita cuando terminemos de leer tus 3 documentos."
+      )
+    ).toHaveCount(2);
+
     await employee
       .getByRole("button", { name: "Enviar mi información" })
       .click();
-
     await expect(
       employee.getByText("Sube este documento.").first()
     ).toBeVisible();
     expect(await count(app, "submission")).toBe(0);
+
+    await employee.getByLabel(LABELS.proofOfAddress).setInputFiles({
+      name: "comprobante.png",
+      mimeType: "image/png",
+      buffer: PNG,
+    });
+    await expect(employee.getByLabel("Calle", { exact: true })).toBeDisabled();
+
+    await employee
+      .getByLabel(LABELS.proofOfAddress)
+      .setInputFiles(pdfFile("cfe.pdf", CFE_TEXT));
+    await expect(employee.getByLabel("Calle", { exact: true })).toBeEnabled();
+    await expect(employee.getByLabel("RFC", { exact: true })).toBeEnabled();
+    await expect(
+      employee.getByText(
+        "Se habilita cuando terminemos de leer tus 3 documentos."
+      )
+    ).toHaveCount(0);
   } finally {
     await context.close();
   }

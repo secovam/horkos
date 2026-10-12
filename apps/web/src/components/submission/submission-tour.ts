@@ -16,7 +16,7 @@ const TOUR_STEPS = [
     anchor: "documents",
     title: "Documentos",
     description:
-      "Sube cada archivo en PDF, de hasta 10 MB. Al subirlo, leemos el documento y llenamos tus datos por ti.",
+      "Sube cada archivo en PDF, de hasta 10 MB. Al subirlo, leemos el documento y llenamos tus datos por ti. Tus datos se habilitan cuando terminemos de leer los 3.",
   },
   {
     anchor: "personal",

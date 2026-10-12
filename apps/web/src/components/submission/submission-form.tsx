@@ -23,7 +23,11 @@ import {
   submitInvitation,
   uploadDocument,
 } from "@/functions/employee-invitation";
-import { submissionFormSchema, uploadsFromServer } from "@/lib/document-upload";
+import {
+  allDocumentsRead,
+  submissionFormSchema,
+  uploadsFromServer,
+} from "@/lib/document-upload";
 import type { DocumentUpload, UploadedDocuments } from "@/lib/document-upload";
 import type { ExtractedFields } from "@/lib/extraction";
 import {
@@ -331,6 +335,16 @@ export function SubmissionForm({
     }
   }
 
+  function renderTextField({ name, ...config }: TextFieldConfig) {
+    return (
+      <form.Field key={name} name={name}>
+        {(field) => (
+          <TextInputField field={field} onEdit={markEdited} {...config} />
+        )}
+      </form.Field>
+    );
+  }
+
   async function upload(kind: DocumentKind, file: File) {
     latestUpload.current[kind] += 1;
     const attempt = latestUpload.current[kind];
@@ -425,28 +439,27 @@ export function SubmissionForm({
         </CardContent>
       </Card>
 
-      {TEXT_SECTIONS.map(({ legend, anchor, fields }) => (
-        <Card key={legend} {...tourAnchor(anchor)}>
-          <CardContent>
-            <FieldSet>
-              <FieldLegend>{legend}</FieldLegend>
-              <FieldGroup>
-                {fields.map(({ name, ...config }) => (
-                  <form.Field key={name} name={name}>
-                    {(field) => (
-                      <TextInputField
-                        field={field}
-                        onEdit={markEdited}
-                        {...config}
-                      />
-                    )}
-                  </form.Field>
-                ))}
-              </FieldGroup>
-            </FieldSet>
-          </CardContent>
-        </Card>
-      ))}
+      <form.Subscribe
+        selector={(state) => allDocumentsRead(state.values.files)}
+      >
+        {(documentsRead) =>
+          TEXT_SECTIONS.map(({ legend, anchor, fields }) => (
+            <Card key={legend} {...tourAnchor(anchor)}>
+              <CardContent>
+                <FieldSet disabled={!documentsRead}>
+                  <FieldLegend>{legend}</FieldLegend>
+                  {documentsRead ? null : (
+                    <FieldDescription>
+                      Se habilita cuando terminemos de leer tus 3 documentos.
+                    </FieldDescription>
+                  )}
+                  <FieldGroup>{fields.map(renderTextField)}</FieldGroup>
+                </FieldSet>
+              </CardContent>
+            </Card>
+          ))
+        }
+      </form.Subscribe>
 
       {submitError ? <FieldError>{submitError}</FieldError> : null}
 
