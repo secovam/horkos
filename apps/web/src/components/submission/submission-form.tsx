@@ -20,7 +20,7 @@ import { useForm, useStore } from "@tanstack/react-form";
 import type { AnyFieldApi } from "@tanstack/react-form";
 import { BotIcon } from "lucide-react";
 import { useRef, useState } from "react";
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 
 import {
   tourAnchor,
@@ -153,6 +153,15 @@ function SectionLegend({ step, children }: { step: number; children: string }) {
         {children}
       </span>
     </FieldLegend>
+  );
+}
+
+// A legend sits outside the fieldset's gap, so the fields need their own space below it.
+function SectionFields({ children }: { children: ReactNode }) {
+  return (
+    <div className="pt-2">
+      <FieldGroup>{children}</FieldGroup>
+    </div>
   );
 }
 
@@ -508,8 +517,7 @@ export function SubmissionForm({
         <CardContent>
           <FieldSet>
             <SectionLegend step={1}>Documentos</SectionLegend>
-            <FieldDescription>PDF de hasta 10 MB.</FieldDescription>
-            <FieldGroup>
+            <SectionFields>
               {DOCUMENT_KIND_LIST.map((kind) => (
                 <form.Field key={kind} name={`files.${kind}`}>
                   {(field) => (
@@ -521,7 +529,7 @@ export function SubmissionForm({
                   )}
                 </form.Field>
               ))}
-            </FieldGroup>
+            </SectionFields>
           </FieldSet>
         </CardContent>
       </Card>
@@ -556,10 +564,7 @@ export function SubmissionForm({
                       Se habilita cuando terminemos de leer tus 3 documentos.
                     </FieldDescription>
                   )}
-                  {/* A legend sits outside the fieldset's gap, so the fields need their own space below it. */}
-                  <div className="pt-2">
-                    <FieldGroup>{fields.map(renderTextField)}</FieldGroup>
-                  </div>
+                  <SectionFields>{fields.map(renderTextField)}</SectionFields>
                 </FieldSet>
               </CardContent>
             </Card>
