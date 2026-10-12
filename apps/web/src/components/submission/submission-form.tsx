@@ -556,7 +556,10 @@ export function SubmissionForm({
                       Se habilita cuando terminemos de leer tus 3 documentos.
                     </FieldDescription>
                   )}
-                  <FieldGroup>{fields.map(renderTextField)}</FieldGroup>
+                  {/* A legend sits outside the fieldset's gap, so the fields need their own space below it. */}
+                  <div className="pt-2">
+                    <FieldGroup>{fields.map(renderTextField)}</FieldGroup>
+                  </div>
                 </FieldSet>
               </CardContent>
             </Card>
