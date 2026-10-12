@@ -1,6 +1,7 @@
 import { defineRelationsPart, sql } from "drizzle-orm";
 import {
   integer,
+  primaryKey,
   sqliteTable,
   text,
   uniqueIndex,
@@ -62,8 +63,35 @@ export const document = sqliteTable(
   ]
 );
 
+export const EXTRACTION_STATUS_VALUES = [
+  "extracted",
+  "unreadable",
+  "failed",
+] as const;
+
+// What Horkos read from a document, kept apart from `submission` so HR can compare the two.
+// `failed` means the extractor errored, `unreadable` means it ran but found no text.
+export const extraction = sqliteTable(
+  "extraction",
+  {
+    invitationId: text("invitation_id")
+      .notNull()
+      .references(() => invitation.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: DOCUMENT_KIND_VALUES }).notNull(),
+    status: text("status", { enum: EXTRACTION_STATUS_VALUES }).notNull(),
+    fields: text("fields", { mode: "json" })
+      .$type<Record<string, string>>()
+      .notNull(),
+    warnings: text("warnings", { mode: "json" }).$type<string[]>().notNull(),
+    extractedAt: integer("extracted_at", { mode: "timestamp_ms" })
+      .default(now)
+      .notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.invitationId, table.kind] })]
+);
+
 export const submissionRelations = defineRelationsPart(
-  { invitation, submission, document },
+  { invitation, submission, document, extraction },
   (r) => ({
     submission: {
       invitation: r.one.invitation({
@@ -77,6 +105,12 @@ export const submissionRelations = defineRelationsPart(
         to: r.invitation.id,
       }),
     },
+    extraction: {
+      invitation: r.one.invitation({
+        from: r.extraction.invitationId,
+        to: r.invitation.id,
+      }),
+    },
     invitation: {
       submission: r.one.submission({
         from: r.invitation.id,
@@ -85,6 +119,10 @@ export const submissionRelations = defineRelationsPart(
       documents: r.many.document({
         from: r.invitation.id,
         to: r.document.invitationId,
+      }),
+      extractions: r.many.extraction({
+        from: r.invitation.id,
+        to: r.extraction.invitationId,
       }),
     },
   })
