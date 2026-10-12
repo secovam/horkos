@@ -1,3 +1,4 @@
+import { Badge } from "@horkos/ui/components/badge";
 import { Button } from "@horkos/ui/components/button";
 import { Card, CardContent } from "@horkos/ui/components/card";
 import {
@@ -123,9 +124,27 @@ const TEXT_FIELD_NAMES = [...PERSONAL_FIELDS, ...ADDRESS_FIELDS].map(
 );
 
 const TEXT_SECTIONS = [
-  { legend: "Datos personales", anchor: "personal", fields: PERSONAL_FIELDS },
-  { legend: "Domicilio", anchor: "address", fields: ADDRESS_FIELDS },
+  {
+    step: 2,
+    legend: "Datos personales",
+    anchor: "personal",
+    fields: PERSONAL_FIELDS,
+  },
+  { step: 3, legend: "Domicilio", anchor: "address", fields: ADDRESS_FIELDS },
 ] as const;
+
+function SectionLegend({ step, children }: { step: number; children: string }) {
+  return (
+    <FieldLegend>
+      <span className="flex items-center gap-2">
+        <span className="bg-secondary text-secondary-foreground flex size-6 items-center justify-center rounded-full text-xs font-semibold tabular-nums">
+          {step}
+        </span>
+        {children}
+      </span>
+    </FieldLegend>
+  );
+}
 
 function TextInputField({
   field,
@@ -209,6 +228,34 @@ function describeUpload(kind: DocumentKind, upload: DocumentUpload) {
   }
 }
 
+function uploadBadge(upload: DocumentUpload) {
+  switch (upload.status) {
+    case "empty": {
+      return { variant: "outline", label: "Pendiente" } as const;
+    }
+
+    case "uploading": {
+      return { variant: "info", label: "Leyendo…" } as const;
+    }
+
+    case "rejected": {
+      return { variant: "destructive", label: "Rechazado" } as const;
+    }
+
+    default: {
+      const { fields, warnings } = upload.extraction;
+
+      if (warnings.length > 0) {
+        return { variant: "destructive", label: "Revísalo" } as const;
+      }
+
+      return Object.keys(fields).length > 0
+        ? ({ variant: "default", label: "Leído" } as const)
+        : ({ variant: "secondary", label: "Sin leer" } as const);
+    }
+  }
+}
+
 function DocumentField({
   field,
   kind,
@@ -221,12 +268,16 @@ function DocumentField({
   const current: DocumentUpload = field.state.value;
   const rejected = current.status === "rejected";
   const invalid = rejected || field.state.meta.errors.length > 0;
+  const badge = uploadBadge(current);
 
   return (
     <Field data-invalid={invalid}>
-      <FieldLabel htmlFor={`file-${kind}`}>
-        {DOCUMENT_KINDS[kind].label}
-      </FieldLabel>
+      <div className="flex items-center justify-between gap-2">
+        <FieldLabel htmlFor={`file-${kind}`}>
+          {DOCUMENT_KINDS[kind].label}
+        </FieldLabel>
+        <Badge variant={badge.variant}>{badge.label}</Badge>
+      </div>
       <Input
         id={`file-${kind}`}
         name={`file_${kind}`}
@@ -420,7 +471,7 @@ export function SubmissionForm({
       <Card {...tourAnchor("documents")}>
         <CardContent>
           <FieldSet>
-            <FieldLegend>Documentos</FieldLegend>
+            <SectionLegend step={1}>Documentos</SectionLegend>
             <FieldDescription>PDF de hasta 10 MB.</FieldDescription>
             <FieldGroup>
               {DOCUMENT_KIND_LIST.map((kind) => (
@@ -443,11 +494,11 @@ export function SubmissionForm({
         selector={(state) => allDocumentsRead(state.values.files)}
       >
         {(documentsRead) =>
-          TEXT_SECTIONS.map(({ legend, anchor, fields }) => (
+          TEXT_SECTIONS.map(({ step, legend, anchor, fields }) => (
             <Card key={legend} {...tourAnchor(anchor)}>
               <CardContent>
                 <FieldSet disabled={!documentsRead}>
-                  <FieldLegend>{legend}</FieldLegend>
+                  <SectionLegend step={step}>{legend}</SectionLegend>
                   {documentsRead ? null : (
                     <FieldDescription>
                       Se habilita cuando terminemos de leer tus 3 documentos.
