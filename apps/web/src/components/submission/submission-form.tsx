@@ -529,7 +529,12 @@ export function SubmissionForm({
       {Object.keys(proposed).length > 0 ? (
         <Alert variant="info">
           <BotIcon />
-          <AlertTitle>Revisa los datos marcados como Auto-extraído</AlertTitle>
+          <AlertTitle>
+            Revisa los datos marcados como{" "}
+            <strong>
+              <em>Auto-extraído</em>
+            </strong>
+          </AlertTitle>
           <AlertDescription>
             Los leímos de tus PDF y podrían estar mal. Compáralos con tus
             documentos y corrige lo que haga falta.
