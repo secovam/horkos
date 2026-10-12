@@ -527,7 +527,7 @@ export function SubmissionForm({
       </Card>
 
       {Object.keys(proposed).length > 0 ? (
-        <Alert>
+        <Alert variant="info">
           <BotIcon />
           <AlertTitle>Revisa los datos marcados como Auto-extraído</AlertTitle>
           <AlertDescription>
