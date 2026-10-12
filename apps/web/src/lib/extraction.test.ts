@@ -1,0 +1,143 @@
+import { describe, expect, it } from "vitest";
+
+import { parseDocument } from "./extraction";
+
+const SAT_CONSTANCIA = `
+# Constancia de Situación Fiscal
+
+| RFC: | XAXX010101ABC |
+| CURP: | FICM900101mdflcr08 |
+| Nombre (s): | MARIA FERNANDA |
+| Primer Apellido: | FICTICIA |
+| Segundo Apellido: | PRUEBA |
+`;
+
+const IMSS_CONSTANCIA = `
+Constancia de Vigencia de Derechos
+Cadena original: Seguridad Social 12345678901
+Curp FICM900101MDFLCR08
+`;
+
+const CFE_RECIBO = `
+COMISIÓN FEDERAL DE ELECTRICIDAD
+MARIA FICTICIA PRUEBA
+###### CALLE FICTICIA 123 COLONIA DE PRUEBA C.P. 64000
+RMU 123456789012
+`;
+
+const TELMEX_RECIBO = `
+TELMEX
+MARIA FICTICIA PRUEBA
+CLL AVENIDA INVENTADA 45 FRACC SIN NOMBRE
+C.P. 64010 MONTERREY NL
+`;
+
+const GENERIC_COMPROBANTE = `
+Recibo emitido por CFE
+Calle: Ejemplo Uno
+Número Exterior: 12
+Número Interior: S/N
+Colonia: Centro de Prueba
+Código Postal: 64020
+Municipio: Monterrey
+Estado: Nuevo León
+`;
+
+describe("parseDocument tax_status", () => {
+  it("maps the SAT table to RFC, CURP and the full name", () => {
+    const { fields, warnings } = parseDocument("tax_status", SAT_CONSTANCIA);
+
+    expect(fields).toEqual({
+      rfc: "XAXX010101ABC",
+      curp: "FICM900101MDFLCR08",
+      fullName: "Maria Fernanda Ficticia Prueba",
+    });
+    expect(warnings).toEqual([]);
+  });
+
+  it("drops an RFC that is not a person's RFC instead of prefilling it", () => {
+    const company = SAT_CONSTANCIA.replace("XAXX010101ABC", "XAX010101ABC");
+
+    expect(parseDocument("tax_status", company).fields).not.toHaveProperty(
+      "rfc"
+    );
+    expect(parseDocument("tax_status", company).fields.curp).toBe(
+      "FICM900101MDFLCR08"
+    );
+  });
+});
+
+describe("parseDocument imss", () => {
+  it("reads the NSS and the CURP, and nothing the form does not ask for", () => {
+    expect(parseDocument("imss", IMSS_CONSTANCIA).fields).toEqual({
+      nss: "12345678901",
+      curp: "FICM900101MDFLCR08",
+    });
+  });
+});
+
+describe("parseDocument proof_of_address", () => {
+  it("splits a CFE address line into street, number and suburb", () => {
+    const { fields, warnings } = parseDocument("proof_of_address", CFE_RECIBO);
+
+    expect(fields).toEqual({
+      street: "CALLE FICTICIA",
+      extNumber: "123",
+      suburb: "COLONIA DE PRUEBA",
+      postalCode: "64000",
+    });
+    expect(warnings).toEqual([]);
+  });
+
+  it("splits a Telmex CLL line", () => {
+    const { fields, warnings } = parseDocument(
+      "proof_of_address",
+      TELMEX_RECIBO
+    );
+
+    expect(fields).toEqual({
+      street: "AVENIDA INVENTADA",
+      extNumber: "45",
+      suburb: "FRACC SIN NOMBRE",
+      postalCode: "64010",
+    });
+    expect(warnings).toEqual([]);
+  });
+
+  it("reads labeled addresses and skips an interior number of S/N", () => {
+    const { fields, warnings } = parseDocument(
+      "proof_of_address",
+      GENERIC_COMPROBANTE
+    );
+
+    expect(fields).toEqual({
+      street: "Ejemplo Uno",
+      extNumber: "12",
+      suburb: "Centro de Prueba",
+      postalCode: "64020",
+      city: "Monterrey",
+      state: "Nuevo León",
+    });
+    expect(warnings).toEqual([]);
+  });
+
+  it("warns when readable text is neither CFE nor Telmex, and still proposes the address", () => {
+    const water = GENERIC_COMPROBANTE.replace("CFE", "el organismo de agua");
+    const { fields, warnings } = parseDocument("proof_of_address", water);
+
+    expect(warnings).toEqual(["not_cfe_or_telmex"]);
+    expect(fields.postalCode).toBe("64020");
+  });
+
+  it("recognizes the issuer by its full name", () => {
+    expect(
+      parseDocument("proof_of_address", CFE_RECIBO).warnings
+    ).not.toContain("not_cfe_or_telmex");
+    expect(
+      parseDocument(
+        "proof_of_address",
+        "Teléfonos de México\nCLL UNO 5 CENTRO C.P. 64000"
+      ).warnings
+    ).toEqual([]);
+  });
+});
