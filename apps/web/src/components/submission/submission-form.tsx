@@ -1,3 +1,8 @@
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@horkos/ui/components/alert";
 import { Badge } from "@horkos/ui/components/badge";
 import { Button } from "@horkos/ui/components/button";
 import { Card, CardContent } from "@horkos/ui/components/card";
@@ -520,6 +525,17 @@ export function SubmissionForm({
           </FieldSet>
         </CardContent>
       </Card>
+
+      {Object.keys(proposed).length > 0 ? (
+        <Alert>
+          <BotIcon />
+          <AlertTitle>Revisa los datos marcados como Auto-extraído</AlertTitle>
+          <AlertDescription>
+            Los leímos de tus PDF y podrían estar mal. Compáralos con tus
+            documentos y corrige lo que haga falta.
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       <form.Subscribe
         selector={(state) => allDocumentsRead(state.values.files)}

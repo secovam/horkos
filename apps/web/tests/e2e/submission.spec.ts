@@ -162,6 +162,11 @@ test("employee uploads documents, reviews the prefilled data and submits; HR see
     await expect(employee.getByLabel("RFC", { exact: true })).toBeEnabled();
 
     await expect(extractedBadge(employee, "RFC")).toBeVisible();
+    await expect(
+      employee
+        .getByRole("alert")
+        .filter({ hasText: "Revisa los datos marcados como Auto-extraído" })
+    ).toBeVisible();
     await expect(extractedBadge(employee, "Código postal")).toBeVisible();
     await expect(extractedBadge(employee, "Estado")).toBeHidden();
 
