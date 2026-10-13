@@ -12,6 +12,14 @@ const webRoot = path.resolve(fileURLToPath(new URL("../..", import.meta.url)));
 
 const migrationRoot = path.resolve(webRoot, "../../packages/db/src/migrations");
 
+// A test PDF containing this marker makes the stand-in extractor answer 500.
+export const EXTRACTOR_FAILURE_MARKER = "EXTRACTOR_FAILURE";
+
+// Fails the first read of a document, like a container that has not finished starting.
+export const EXTRACTOR_COLD_START_MARKER = "EXTRACTOR_COLD_START";
+
+const COMPATIBILITY_DATE = "2026-07-30";
+
 const capturedMailSchema = z.object({
   from: z.string(),
   to: z.string(),
@@ -61,7 +69,7 @@ export default { fetch: (request, env, context) => app.fetch(request, env, conte
           name: "app",
           modulesRoot: directory,
           modules: [{ type: "ESModule", path: bundle }],
-          compatibilityDate: "2026-07-30",
+          compatibilityDate: COMPATIBILITY_DATE,
           compatibilityFlags: ["nodejs_compat"],
           assets: {
             directory: path.resolve(webRoot, "dist/client"),
@@ -70,7 +78,11 @@ export default { fetch: (request, env, context) => app.fetch(request, env, conte
               invoke_user_worker_ahead_of_assets: false,
             },
           },
+          durableObjects: {
+            EXTRACTOR: { className: "Extractor", scriptName: "extractor" },
+          },
           d1Databases: { DB: "test-db" },
+          r2Buckets: { DOCUMENTS: "documents" },
           queueProducers: { INVITATION_QUEUE: "invitation-emails" },
           queueConsumers: {
             "invitation-emails": {
@@ -89,6 +101,31 @@ export default { fetch: (request, env, context) => app.fetch(request, env, conte
           },
         },
         {
+          // Stands in for the container, which Miniflare cannot run: the "text" of a test PDF is
+          // whatever follows its `%PDF-1.4` header line.
+          name: "extractor",
+          modules: true,
+          script: `import { DurableObject } from "cloudflare:workers";
+            const started = new Set();
+            export class Extractor extends DurableObject {
+              async fetch(request) {
+                const body = await request.text();
+                if (body.includes("${EXTRACTOR_FAILURE_MARKER}")) {
+                  return new Response("boom", { status: 500 });
+                }
+                if (body.includes("${EXTRACTOR_COLD_START_MARKER}") && !started.has(body)) {
+                  started.add(body);
+                  return new Response("starting", { status: 503 });
+                }
+                const text = body.slice(body.indexOf("\\n") + 1).trim();
+                return Response.json({ text: text || null });
+              }
+            }
+            export default { fetch() { return new Response("ok"); } };`,
+          compatibilityDate: COMPATIBILITY_DATE,
+          durableObjects: { EXTRACTOR: "Extractor" },
+        },
+        {
           name: "mailer",
           modules: true,
           script: `import { WorkerEntrypoint } from "cloudflare:workers";
@@ -104,7 +141,7 @@ export default { fetch: (request, env, context) => app.fetch(request, env, conte
               }
             }
             export default { fetch() { return new Response("ok"); } };`,
-          compatibilityDate: "2026-07-30",
+          compatibilityDate: COMPATIBILITY_DATE,
           kvNamespaces: { OUTBOX: "outbox" },
         },
       ],
@@ -149,12 +186,30 @@ export default { fetch: (request, env, context) => app.fetch(request, env, conte
       )
       .bind("verification-hr", "Verification HR", "verification-hr@example.com")
       .run();
+    const documents = await runtime.getR2Bucket("DOCUMENTS", "app");
     const outbox = await runtime.getKVNamespace("OUTBOX", "mailer");
     const ownedRuntime = runtime;
 
     return {
       baseURL,
       db,
+      async listObjects() {
+        const listed = await documents.list();
+
+        return listed.objects.map(({ key }) => key);
+      },
+      async getObject(key: string) {
+        const object = await documents.get(key);
+
+        if (!object) {
+          return null;
+        }
+
+        return {
+          bytes: new Uint8Array(await object.arrayBuffer()),
+          contentType: object.httpMetadata?.contentType,
+        };
+      },
       async getMail() {
         const messages: CapturedMail[] = [];
 

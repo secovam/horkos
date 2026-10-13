@@ -48,7 +48,7 @@ test("cancel does not create an invitation and duplicate email cannot send anoth
   ).toBe(1);
 });
 
-test("scanner GET leaves unopened; mobile anonymous visit records first opening once", async ({
+test("scanner GET leaves unopened; desktop anonymous visit records first opening once", async ({
   app,
   page,
   browser,
@@ -57,20 +57,20 @@ test("scanner GET leaves unopened; mobile anonymous visit records first opening 
   const link = await invitationLink(app, 1);
   const response = await page.request.get(link);
   expect(response.status()).toBe(200);
-  expect(await response.text()).toContain("Tu invitación fue recibida");
+  expect(await response.text()).toContain("Completa tu información");
   expect(
     await app.db.prepare("SELECT opened_at FROM invitation").first("opened_at")
   ).toBeNull();
 
   const employee = await browser.newContext({
-    viewport: { width: 390, height: 844 },
+    viewport: { width: 1280, height: 900 },
   });
 
   try {
     const employeePage = await employee.newPage();
     await employeePage.goto(link);
     await expect(
-      employeePage.getByRole("heading", { name: "Tu invitación fue recibida" })
+      employeePage.getByRole("heading", { name: "Completa tu información" })
     ).toBeVisible();
     await expect(employeePage.locator('meta[name="referrer"]')).toHaveAttribute(
       "content",
@@ -96,7 +96,7 @@ test("scanner GET leaves unopened; mobile anonymous visit records first opening 
     const reopenedResponse = await reopened;
     expect(reopenedResponse.ok()).toBe(true);
     await expect(
-      employeePage.getByRole("heading", { name: "Tu invitación fue recibida" })
+      employeePage.getByRole("heading", { name: "Completa tu información" })
     ).toBeVisible();
     expect(
       await app.db
@@ -104,7 +104,7 @@ test("scanner GET leaves unopened; mobile anonymous visit records first opening 
         .first("opened_at")
     ).toBe(openedAt);
     await employeePage.screenshot({
-      path: test.info().outputPath("mobile-employee.png"),
+      path: test.info().outputPath("employee.png"),
     });
     await employeePage.goto(`${app.baseURL}/invitacion/not-a-valid-token`);
     await expect(
@@ -114,6 +114,39 @@ test("scanner GET leaves unopened; mobile anonymous visit records first opening 
     ).toBeVisible();
     await employeePage.goto(`${app.baseURL}/dashboard`);
     await expect(employeePage).toHaveURL(/\/login$/u);
+  } finally {
+    await employee.close();
+  }
+});
+
+test("phone sees the computer notice and no form, and the opening is still recorded", async ({
+  app,
+  page,
+  browser,
+}) => {
+  await invite(page);
+  const link = await invitationLink(app, 1);
+
+  const employee = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    hasTouch: true,
+    isMobile: true,
+  });
+
+  try {
+    const phone = await employee.newPage();
+    await phone.goto(link);
+    await expect(
+      phone.getByRole("heading", {
+        name: "Abre este enlace en una computadora",
+      })
+    ).toBeVisible();
+    await expect(phone.getByRole("textbox")).toHaveCount(0);
+    await expect
+      .poll(() =>
+        app.db.prepare("SELECT opened_at FROM invitation").first("opened_at")
+      )
+      .not.toBeNull();
   } finally {
     await employee.close();
   }
@@ -138,7 +171,7 @@ test("resend invalidates old link; revoke blocks it; reactivate sends a fresh li
     ).toBeVisible();
     await employee.goto(resent);
     await expect(
-      employee.getByRole("heading", { name: "Tu invitación fue recibida" })
+      employee.getByRole("heading", { name: "Completa tu información" })
     ).toBeVisible();
     await confirmAction(page, "Revocar");
     await expect(
@@ -158,7 +191,7 @@ test("resend invalidates old link; revoke blocks it; reactivate sends a fresh li
     ).toBeVisible();
     await employee.goto(reactivated);
     await expect(
-      employee.getByRole("heading", { name: "Tu invitación fue recibida" })
+      employee.getByRole("heading", { name: "Completa tu información" })
     ).toBeVisible();
     await page.getByRole("tab", { name: /Activas/u }).click();
     await expect(
@@ -198,7 +231,7 @@ test("failed resend restores old link and failed reactivation remains revoked", 
   try {
     await employee.goto(original);
     await expect(
-      employee.getByRole("heading", { name: "Tu invitación fue recibida" })
+      employee.getByRole("heading", { name: "Completa tu información" })
     ).toBeVisible();
     await confirmAction(page, "Revocar");
     await page.getByRole("tab", { name: /Revocadas/u }).click();

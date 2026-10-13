@@ -20,8 +20,11 @@ export function InvitationEmail({
         para preparar tu contrato.
       </EmailText>
       <EmailText>
-        No necesitas crear una cuenta y puedes hacerlo desde tu teléfono.
+        Abre el enlace desde una computadora y ten a la mano tus 3 documentos en
+        PDF: constancia de situación fiscal, constancia del IMSS y un recibo de
+        luz de CFE o de teléfono de Telmex como comprobante de domicilio.
       </EmailText>
+      <EmailText>No necesitas crear una cuenta.</EmailText>
     </EmailLayout>
   );
 }

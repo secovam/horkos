@@ -6,6 +6,6 @@ All recipes use the disposable Playwright harness from [verify](../SKILL.md). Bu
 - [Dashboard](dashboard.md): invitation/open counts, revoked exclusion and navigation.
 - [Invitation browsing](invitation-list.md): literal search, private URLs, tabs and pagination.
 - [Invitation management](invitation-management.md): create/cancel/duplicate, resend/revoke/reactivate and delivery failures.
-- [Employee link](employee-link.md): scanner GET, anonymous mobile visit, first-open tracking and stale links.
+- [Employee link](employee-link.md): scanner GET, anonymous desktop visit, phone notice, first-open tracking and stale links.
 
 Wait for assertions or the specific server response rather than a fixed delay. Report tested feature IDs and uncovered entries. Uploads, extraction, HR completion and PDF download have no user routes yet; this map does not claim to verify them.

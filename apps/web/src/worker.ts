@@ -32,3 +32,6 @@ const { fetch } = withEvlog(async (request, _env, _ctx, log) => {
 // Worker entry (`main` in alchemy.run.ts): TanStack Start only exports `fetch`, and the
 // cron and the queue consumer need `scheduled` and `queue` on the same default export.
 export default { fetch, ...workerHandlers } satisfies ExportedHandler;
+
+// The Durable Object class behind the `EXTRACTOR` container binding must be a named export of the Worker.
+export { Extractor } from "@/extractor";
