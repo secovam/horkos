@@ -56,7 +56,6 @@ interface TextFieldConfig {
   inputMode?: ComponentProps<"input">["inputMode"];
   autoCapitalize?: string;
   maxLength?: number;
-  hint?: string;
 }
 
 const PERSONAL_FIELDS: readonly TextFieldConfig[] = [
@@ -64,7 +63,6 @@ const PERSONAL_FIELDS: readonly TextFieldConfig[] = [
     name: "fullName",
     label: "Nombre completo",
     autoComplete: "name",
-    hint: "Como aparece en tu identificación oficial.",
   },
   {
     name: "rfc",
@@ -172,7 +170,6 @@ function TextInputField({
   inputMode,
   autoCapitalize,
   maxLength,
-  hint,
   extracted,
   onEdit,
 }: Omit<TextFieldConfig, "name"> & {
@@ -213,7 +210,6 @@ function TextInputField({
           field.handleChange(event.target.value);
         }}
       />
-      {hint ? <FieldDescription>{hint}</FieldDescription> : null}
       <FieldError errors={field.state.meta.errors} />
     </Field>
   );
