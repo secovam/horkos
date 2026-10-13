@@ -2,7 +2,10 @@ import type { Browser, Locator, Page } from "@playwright/test";
 
 import { confirmAction, invitationLink, invite, login } from "./actions";
 import { expect, test } from "./fixtures";
-import { EXTRACTOR_FAILURE_MARKER } from "./runtime";
+import {
+  EXTRACTOR_COLD_START_MARKER,
+  EXTRACTOR_FAILURE_MARKER,
+} from "./runtime";
 import type { LocalApp } from "./runtime";
 
 // The stand-in extractor returns whatever follows the header line as the document text.
@@ -471,6 +474,29 @@ test("unreadable and failed documents leave the fields empty; a wrong issuer onl
     await expect(
       employee.getByRole("heading", { name: "Recibimos tu información" })
     ).toBeVisible();
+  } finally {
+    await context.close();
+  }
+});
+
+test("a document read while the extractor is still starting is read on the second try", async ({
+  app,
+  browser,
+}) => {
+  const { context, employee } = await openForm(browser, app);
+
+  try {
+    await employee
+      .getByLabel(LABELS.taxStatus)
+      .setInputFiles(
+        pdfFile("sat.pdf", `${EXTRACTOR_COLD_START_MARKER}\n${SAT_TEXT}`)
+      );
+    await expect(employee.getByLabel("RFC", { exact: true })).toHaveValue(
+      "XAXX010101AB1"
+    );
+    await expect(employee.getByLabel("Nombre completo")).toHaveValue(
+      "Maria Ficticia Prueba"
+    );
   } finally {
     await context.close();
   }

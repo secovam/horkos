@@ -15,6 +15,9 @@ const migrationRoot = path.resolve(webRoot, "../../packages/db/src/migrations");
 // A test PDF containing this marker makes the stand-in extractor answer 500.
 export const EXTRACTOR_FAILURE_MARKER = "EXTRACTOR_FAILURE";
 
+// Fails the first read of a document, like a container that has not finished starting.
+export const EXTRACTOR_COLD_START_MARKER = "EXTRACTOR_COLD_START";
+
 const COMPATIBILITY_DATE = "2026-07-30";
 
 const capturedMailSchema = z.object({
@@ -103,11 +106,16 @@ export default { fetch: (request, env, context) => app.fetch(request, env, conte
           name: "extractor",
           modules: true,
           script: `import { DurableObject } from "cloudflare:workers";
+            const started = new Set();
             export class Extractor extends DurableObject {
               async fetch(request) {
                 const body = await request.text();
                 if (body.includes("${EXTRACTOR_FAILURE_MARKER}")) {
                   return new Response("boom", { status: 500 });
+                }
+                if (body.includes("${EXTRACTOR_COLD_START_MARKER}") && !started.has(body)) {
+                  started.add(body);
+                  return new Response("starting", { status: 503 });
                 }
                 const text = body.slice(body.indexOf("\\n") + 1).trim();
                 return Response.json({ text: text || null });

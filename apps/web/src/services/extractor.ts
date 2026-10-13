@@ -37,6 +37,20 @@ async function readText(bytes: ArrayBuffer) {
   return textResponseSchema.parse(await response.json()).text;
 }
 
+// A container that is still starting fails fast, so that failure gets one more try. A timeout
+// does not: the PDF itself is slow, and a second wait would double it.
+async function readTextOnceMore(bytes: ArrayBuffer) {
+  try {
+    return await readText(bytes);
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "TimeoutError") {
+      throw error;
+    }
+
+    return readText(bytes);
+  }
+}
+
 // A container failure must never fail the upload: the employee types by hand instead.
 // Nothing here is logged, since errors and text can quote personal data.
 export async function extractDocument(
@@ -46,7 +60,7 @@ export async function extractDocument(
   let text: string | null;
 
   try {
-    text = await readText(bytes);
+    text = await readTextOnceMore(bytes);
   } catch {
     return FAILED_EXTRACTION;
   }
