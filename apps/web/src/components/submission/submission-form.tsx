@@ -561,9 +561,11 @@ export function SubmissionForm({
                 <FieldSet disabled={!documentsRead}>
                   <SectionLegend step={step}>{legend}</SectionLegend>
                   {documentsRead ? null : (
-                    <FieldDescription>
-                      Se habilita cuando terminemos de leer tus 3 documentos.
-                    </FieldDescription>
+                    <div className="pt-2">
+                      <FieldDescription>
+                        Se habilita cuando terminemos de leer tus 3 documentos.
+                      </FieldDescription>
+                    </div>
                   )}
                   <SectionFields>{fields.map(renderTextField)}</SectionFields>
                 </FieldSet>
