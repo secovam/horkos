@@ -2,6 +2,7 @@ import { invitation } from "@horkos/db/schema/invitation";
 import { document, extraction, submission } from "@horkos/db/schema/submission";
 import { createServerFn } from "@tanstack/react-start";
 import { and, eq, isNull, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import { z } from "zod";
 
 import { ENV } from "@/env.server";
@@ -216,6 +217,17 @@ function parseSubmissionForm(form: FormData) {
   return { token: token.data, fields: fields.data };
 }
 
+// Turns plain values into a selection, so `INSERT ... SELECT` can bind them next to columns.
+function asSelection<T extends Record<string, unknown>>(values: T) {
+  // SAFETY: every entry keeps its key and wraps its own value, which is what the mapped type says.
+  return Object.fromEntries(
+    Object.entries(values).map(([name, value]) => [
+      name,
+      sql`${value}`.as(name),
+    ])
+  ) as { [K in keyof T]: SQL.Aliased<T[K]> };
+}
+
 export const submitInvitation = createServerFn({ method: "POST" })
   .validator(parseSubmissionForm)
   .handler(async ({ data: { token, fields } }) => {
@@ -235,18 +247,27 @@ export const submitInvitation = createServerFn({ method: "POST" })
       throw new Error(`Sube tu documento: ${DOCUMENT_KINDS[missing].label}.`);
     }
 
-    const [marked] = await db.batch([
-      db
-        .update(invitation)
-        .set({ submittedAt: new Date() })
-        .where(
-          and(eq(invitation.id, found.id), isNull(invitation.submittedAt))
-        ),
-      db.insert(submission).values({
-        invitationId: found.id,
-        ...fields,
-        intNumber: fields.intNumber || null,
-      }),
+    // Both statements check the invitation is still open, so a revocation or a second
+    // submit that lands after `findOpenInvitation` leaves nothing behind.
+    const stillOpen = and(
+      eq(invitation.id, found.id),
+      isNull(invitation.revokedAt),
+      isNull(invitation.submittedAt)
+    );
+
+    const values = { ...fields, intNumber: fields.intNumber || null };
+
+    const [, marked] = await db.batch([
+      db.insert(submission).select(
+        db
+          .select({
+            invitationId: invitation.id,
+            ...asSelection(values),
+          })
+          .from(invitation)
+          .where(stillOpen)
+      ),
+      db.update(invitation).set({ submittedAt: new Date() }).where(stillOpen),
     ]);
 
     return { ok: marked.meta.changes === 1 };
