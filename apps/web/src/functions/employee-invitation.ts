@@ -140,7 +140,7 @@ function parseUploadForm(form: FormData) {
 }
 
 // Runs as soon as the employee picks a file, so the form can be prefilled while they keep going.
-// Uploading again replaces the document: same R2 key, same rows.
+// Uploading again replaces the document: a new R2 object, the same rows, and the old object deleted.
 export const uploadDocument = createServerFn({ method: "POST" })
   .validator(parseUploadForm)
   .handler(async ({ data: { token, kind, file } }) => {
@@ -155,46 +155,67 @@ export const uploadDocument = createServerFn({ method: "POST" })
       throw new Error("Sube un archivo PDF.");
     }
 
-    const objectKey = employeeObjectKey(found.id, kind);
+    const objectKey = employeeObjectKey(found.id, kind, crypto.randomUUID());
 
     await ENV.DOCUMENTS.put(objectKey, bytes, {
       httpMetadata: { contentType },
     });
 
-    const result = await extractDocument(kind, bytes);
-    const db = getDb();
+    let replaced: string | undefined;
 
-    // Together, so a document is never listed with the extraction of the one it replaced.
-    await db.batch([
-      db
-        .insert(document)
-        .values({
-          invitationId: found.id,
-          kind,
-          objectKey,
-          fileName: file.name,
-          contentType,
-          size: file.size,
-        })
-        .onConflictDoUpdate({
-          target: [document.invitationId, document.kind],
-          set: {
+    try {
+      const result = await extractDocument(kind, bytes);
+      const db = getDb();
+
+      // Together, so a document is never listed with the extraction of the one it replaced,
+      // and each upload learns exactly which object it displaced.
+      const [previous] = await db.batch([
+        db
+          .select({ objectKey: document.objectKey })
+          .from(document)
+          .where(
+            and(eq(document.invitationId, found.id), eq(document.kind, kind))
+          ),
+        db
+          .insert(document)
+          .values({
+            invitationId: found.id,
+            kind,
+            objectKey,
             fileName: file.name,
             contentType,
             size: file.size,
-            uploadedAt: new Date(),
-          },
-        }),
-      db
-        .insert(extraction)
-        .values({ invitationId: found.id, kind, ...result })
-        .onConflictDoUpdate({
-          target: [extraction.invitationId, extraction.kind],
-          set: { ...result, extractedAt: new Date() },
-        }),
-    ]);
+          })
+          .onConflictDoUpdate({
+            target: [document.invitationId, document.kind],
+            set: {
+              objectKey,
+              fileName: file.name,
+              contentType,
+              size: file.size,
+              uploadedAt: new Date(),
+            },
+          }),
+        db
+          .insert(extraction)
+          .values({ invitationId: found.id, kind, ...result })
+          .onConflictDoUpdate({
+            target: [extraction.invitationId, extraction.kind],
+            set: { ...result, extractedAt: new Date() },
+          }),
+      ]);
 
-    return { fileName: file.name, extraction: result };
+      replaced = previous[0]?.objectKey;
+
+      return { fileName: file.name, extraction: result };
+    } catch (error) {
+      await ENV.DOCUMENTS.delete(objectKey);
+      throw error;
+    } finally {
+      if (replaced) {
+        await ENV.DOCUMENTS.delete(replaced);
+      }
+    }
   });
 
 function parseSubmissionForm(form: FormData) {

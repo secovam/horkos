@@ -63,9 +63,9 @@ describe("documentFileSchema", () => {
 });
 
 describe("employeeObjectKey", () => {
-  test("is deterministic and leaves the hr prefix free", () => {
-    expect(employeeObjectKey("abc", "imss")).toBe(
-      "invitations/abc/employee/imss"
+  test("is unique per upload and leaves the hr prefix free", () => {
+    expect(employeeObjectKey("abc", "imss", "u1")).toBe(
+      "invitations/abc/employee/imss/u1"
     );
   });
 });

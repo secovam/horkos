@@ -239,31 +239,36 @@ test("employee uploads documents, reviews the prefilled data and submits; HR see
     expect(documents).toEqual([
       {
         kind: "imss",
-        object_key: `invitations/${invitationId}/employee/imss`,
+        object_key: expect.stringMatching(
+          `^invitations/${invitationId}/employee/imss/`
+        ),
         file_name: "imss.pdf",
         content_type: "application/pdf",
       },
       {
         kind: "proof_of_address",
-        object_key: `invitations/${invitationId}/employee/proof_of_address`,
+        object_key: expect.stringMatching(
+          `^invitations/${invitationId}/employee/proof_of_address/`
+        ),
         file_name: "cfe.pdf",
         content_type: "application/pdf",
       },
       {
         kind: "tax_status",
-        object_key: `invitations/${invitationId}/employee/tax_status`,
+        object_key: expect.stringMatching(
+          `^invitations/${invitationId}/employee/tax_status/`
+        ),
         file_name: "sat.pdf",
         content_type: "application/pdf",
       },
     ]);
     const objectKeys = await app.listObjects();
 
-    const satObject = await app.getObject(
-      `invitations/${invitationId}/employee/tax_status`
-    );
+    const satObject = await app.getObject(String(documents[2].object_key));
 
+    expect(objectKeys).toHaveLength(documents.length);
     expect(objectKeys).toEqual(
-      documents.map((document) => document.object_key)
+      expect.arrayContaining(documents.map((document) => document.object_key))
     );
     expect(satObject?.bytes).toEqual(new Uint8Array(pdf(SAT_TEXT)));
 
@@ -372,11 +377,17 @@ test("a returning employee finds the uploaded document and can replace it", asyn
       .prepare("SELECT id FROM invitation")
       .first("id");
 
-    const key = `invitations/${invitationId}/employee/tax_status`;
+    const objectKey = await app.db
+      .prepare("SELECT object_key FROM document WHERE kind = 'tax_status'")
+      .first("object_key");
 
-    const replaced = await app.getObject(key);
+    const replaced = await app.getObject(String(objectKey));
 
+    // The first sat.pdf is gone: one object per document.
     expect(await app.listObjects()).toHaveLength(3);
+    expect(objectKey).toMatch(
+      new RegExp(`^invitations/${invitationId}/employee/tax_status/`, "u")
+    );
     expect(replaced?.bytes).toEqual(new Uint8Array(pdf(replacement)));
     expect(
       await app.db

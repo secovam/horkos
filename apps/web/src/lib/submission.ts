@@ -18,10 +18,14 @@ export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 
 export const DOCUMENT_ACCEPT = "application/pdf";
 
-// Deterministic, so a retried submit overwrites instead of orphaning. The bucket also
+// One key per upload, so concurrent replacements never share bytes. The bucket also
 // holds HR uploads later, under `invitations/{id}/hr/`.
-export function employeeObjectKey(invitationId: string, kind: DocumentKind) {
-  return `invitations/${invitationId}/employee/${kind}`;
+export function employeeObjectKey(
+  invitationId: string,
+  kind: DocumentKind,
+  uploadId: string
+) {
+  return `invitations/${invitationId}/employee/${kind}/${uploadId}`;
 }
 
 const PDF_SIGNATURE = [0x25, 0x50, 0x44, 0x46] as const;
