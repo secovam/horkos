@@ -237,7 +237,7 @@ function proposedValues(uploads: DocumentUploads) {
   return proposed;
 }
 
-function describeUpload(kind: DocumentKind, upload: DocumentUpload) {
+function describeUpload(upload: DocumentUpload) {
   switch (upload.status) {
     case "uploading": {
       return "Subiendo y leyendo tu documento…";
@@ -259,7 +259,7 @@ function describeUpload(kind: DocumentKind, upload: DocumentUpload) {
     }
 
     default: {
-      return DOCUMENT_KINDS[kind].hint;
+      return null;
     }
   }
 }
@@ -305,6 +305,7 @@ function DocumentField({
   const rejected = current.status === "rejected";
   const invalid = rejected || field.state.meta.errors.length > 0;
   const badge = uploadBadge(current);
+  const description = describeUpload(current);
 
   return (
     <Field data-invalid={invalid}>
@@ -329,7 +330,7 @@ function DocumentField({
           }
         }}
       />
-      <FieldDescription>{describeUpload(kind, current)}</FieldDescription>
+      {description ? <FieldDescription>{description}</FieldDescription> : null}
       {rejected ? <FieldError>{current.message}</FieldError> : null}
       <FieldError errors={field.state.meta.errors} />
     </Field>

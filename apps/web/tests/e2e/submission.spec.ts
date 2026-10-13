@@ -33,7 +33,7 @@ const CFE_TEXT = `COMISIÓN FEDERAL DE ELECTRICIDAD
 const LABELS = {
   taxStatus: "Constancia de situación fiscal",
   imss: "Constancia del IMSS (NSS)",
-  proofOfAddress: "Comprobante de domicilio",
+  proofOfAddress: "Comprobante de domicilio (Telmex o CFE)",
 } as const;
 
 const FILLED_BY_HAND = {

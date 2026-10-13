@@ -9,19 +9,10 @@ export const DOCUMENT_KIND_LIST = [
 export type DocumentKind = (typeof DOCUMENT_KIND_LIST)[number];
 
 export const DOCUMENT_KINDS = {
-  tax_status: {
-    label: "Constancia de situación fiscal",
-    hint: "El PDF que descargas del SAT.",
-  },
-  imss: {
-    label: "Constancia del IMSS (NSS)",
-    hint: "El PDF de tu constancia de vigencia de derechos o de asignación de NSS.",
-  },
-  proof_of_address: {
-    label: "Comprobante de domicilio",
-    hint: "Recibo de luz de CFE o de teléfono de Telmex, en PDF, con menos de 3 meses.",
-  },
-} satisfies Record<DocumentKind, { label: string; hint: string }>;
+  tax_status: { label: "Constancia de situación fiscal" },
+  imss: { label: "Constancia del IMSS (NSS)" },
+  proof_of_address: { label: "Comprobante de domicilio (Telmex o CFE)" },
+} satisfies Record<DocumentKind, { label: string }>;
 
 export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 
