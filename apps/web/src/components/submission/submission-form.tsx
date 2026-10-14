@@ -16,6 +16,13 @@ import {
   FieldSet,
 } from "@horkos/ui/components/field";
 import { Input } from "@horkos/ui/components/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@horkos/ui/components/select";
 import { useForm, useStore } from "@tanstack/react-form";
 import type { AnyFieldApi } from "@tanstack/react-form";
 import { BotIcon } from "lucide-react";
@@ -45,17 +52,38 @@ import {
   DOCUMENT_ACCEPT,
   DOCUMENT_KINDS,
   DOCUMENT_KIND_LIST,
+  MARITAL_STATUSES,
+  MARITAL_STATUS_LIST,
+  RELATIONSHIPS,
+  RELATIONSHIP_LIST,
   documentFileSchema,
 } from "@/lib/submission";
 import type { DocumentKind, SubmissionInput } from "@/lib/submission";
 
+type ChoiceFieldName = "maritalStatus" | "beneficiaryRelationship";
+
+type TextFieldName = Exclude<keyof SubmissionInput, ChoiceFieldName>;
+
 interface TextFieldConfig {
-  name: keyof SubmissionInput;
+  name: TextFieldName;
   label: string;
   autoComplete: string;
   inputMode?: ComponentProps<"input">["inputMode"];
   autoCapitalize?: string;
   maxLength?: number;
+}
+
+interface ChoiceFieldConfig {
+  name: ChoiceFieldName;
+  label: string;
+  items: readonly { value: string; label: string }[];
+}
+
+function choiceItems<T extends string>(
+  values: readonly T[],
+  labels: Record<T, { label: string }>
+) {
+  return values.map((value) => ({ value, label: labels[value].label }));
 }
 
 const PERSONAL_FIELDS: readonly TextFieldConfig[] = [
@@ -84,6 +112,13 @@ const PERSONAL_FIELDS: readonly TextFieldConfig[] = [
     autoComplete: "off",
     inputMode: "numeric",
     maxLength: 11,
+  },
+  {
+    name: "phone",
+    label: "Teléfono",
+    autoComplete: "tel-national",
+    inputMode: "tel",
+    maxLength: 14,
   },
 ];
 
@@ -127,9 +162,39 @@ const ADDRESS_FIELDS: readonly TextFieldConfig[] = [
   },
 ];
 
-const TEXT_FIELD_NAMES = [...PERSONAL_FIELDS, ...ADDRESS_FIELDS].map(
+const BENEFICIARY_FIELDS: readonly TextFieldConfig[] = [
+  {
+    name: "beneficiaryName",
+    label: "Nombre del beneficiario",
+    autoComplete: "off",
+  },
+];
+
+const PERSONAL_CHOICES: readonly ChoiceFieldConfig[] = [
+  {
+    name: "maritalStatus",
+    label: "Estado civil",
+    items: choiceItems(MARITAL_STATUS_LIST, MARITAL_STATUSES),
+  },
+];
+
+const BENEFICIARY_CHOICES: readonly ChoiceFieldConfig[] = [
+  {
+    name: "beneficiaryRelationship",
+    label: "Parentesco",
+    items: choiceItems(RELATIONSHIP_LIST, RELATIONSHIPS),
+  },
+];
+
+const CHOICE_FIELD_NAMES = [...PERSONAL_CHOICES, ...BENEFICIARY_CHOICES].map(
   ({ name }) => name
 );
+
+const TEXT_FIELD_NAMES = [
+  ...PERSONAL_FIELDS,
+  ...ADDRESS_FIELDS,
+  ...BENEFICIARY_FIELDS,
+].map(({ name }) => name);
 
 const TEXT_SECTIONS = [
   {
@@ -137,8 +202,22 @@ const TEXT_SECTIONS = [
     legend: "Datos personales",
     anchor: "personal",
     fields: PERSONAL_FIELDS,
+    choices: PERSONAL_CHOICES,
   },
-  { step: 3, legend: "Domicilio", anchor: "address", fields: ADDRESS_FIELDS },
+  {
+    step: 3,
+    legend: "Domicilio",
+    anchor: "address",
+    fields: ADDRESS_FIELDS,
+    choices: [],
+  },
+  {
+    step: 4,
+    legend: "Beneficiario",
+    anchor: "beneficiary",
+    fields: BENEFICIARY_FIELDS,
+    choices: BENEFICIARY_CHOICES,
+  },
 ] as const;
 
 function SectionLegend({ step, children }: { step: number; children: string }) {
@@ -175,7 +254,7 @@ function TextInputField({
 }: Omit<TextFieldConfig, "name"> & {
   field: AnyFieldApi;
   extracted?: string;
-  onEdit: (name: keyof SubmissionInput) => void;
+  onEdit: (name: TextFieldName) => void;
 }) {
   const invalid = field.state.meta.errors.length > 0;
 
@@ -210,6 +289,42 @@ function TextInputField({
           field.handleChange(event.target.value);
         }}
       />
+      <FieldError errors={field.state.meta.errors} />
+    </Field>
+  );
+}
+
+function ChoiceField({
+  field,
+  label,
+  items,
+}: Omit<ChoiceFieldConfig, "name"> & { field: AnyFieldApi }) {
+  const invalid = field.state.meta.errors.length > 0;
+
+  return (
+    <Field data-invalid={invalid}>
+      <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
+      <Select
+        name={field.name}
+        items={items}
+        value={field.state.value || null}
+        onValueChange={(value) => field.handleChange(value ?? "")}
+      >
+        <SelectTrigger
+          id={field.name}
+          aria-invalid={invalid}
+          onBlur={field.handleBlur}
+        >
+          <SelectValue placeholder="Elige una opción" />
+        </SelectTrigger>
+        <SelectContent>
+          {items.map((item) => (
+            <SelectItem key={item.value} value={item.value}>
+              {item.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <FieldError errors={field.state.meta.errors} />
     </Field>
   );
@@ -347,7 +462,7 @@ export function SubmissionForm({
   const startTour = useSubmissionTour();
   const [submitError, setSubmitError] = useState<string | null>(null);
   // Fields the person typed in. Prefills fill the rest and never count as an edit.
-  const edited = useRef(new Set<keyof SubmissionInput>());
+  const edited = useRef(new Set<TextFieldName>());
 
   // Newest upload per document, so a slow earlier answer cannot overwrite a later pick.
   const latestUpload = useRef<Record<DocumentKind, number>>({
@@ -362,6 +477,8 @@ export function SubmissionForm({
       rfc: "",
       curp: "",
       nss: "",
+      maritalStatus: "",
+      phone: "",
       street: "",
       extNumber: "",
       intNumber: "",
@@ -369,6 +486,8 @@ export function SubmissionForm({
       postalCode: "",
       city: "",
       state: "",
+      beneficiaryName: "",
+      beneficiaryRelationship: "",
       ...proposedValues(uploadsFromServer(initialDocuments)),
       files: uploadsFromServer(initialDocuments),
     },
@@ -383,6 +502,10 @@ export function SubmissionForm({
       body.set("token", token);
 
       for (const name of TEXT_FIELD_NAMES) {
+        body.set(name, value[name]);
+      }
+
+      for (const name of CHOICE_FIELD_NAMES) {
         body.set(name, value[name]);
       }
 
@@ -409,7 +532,7 @@ export function SubmissionForm({
     useStore(form.store, (state) => state.values.files)
   );
 
-  function markEdited(name: keyof SubmissionInput) {
+  function markEdited(name: TextFieldName) {
     edited.current.add(name);
   }
 
@@ -434,6 +557,15 @@ export function SubmissionForm({
             {...config}
           />
         )}
+      </form.Field>
+    );
+  }
+
+  // oxlint-disable-next-line unicorn/consistent-function-scoping -- It captures `form`; the rule misses captures used only in JSX.
+  function renderChoiceField({ name, ...config }: ChoiceFieldConfig) {
+    return (
+      <form.Field key={name} name={name}>
+        {(field) => <ChoiceField field={field} {...config} />}
       </form.Field>
     );
   }
@@ -551,7 +683,7 @@ export function SubmissionForm({
         selector={(state) => allDocumentsRead(state.values.files)}
       >
         {(documentsRead) =>
-          TEXT_SECTIONS.map(({ step, legend, anchor, fields }) => (
+          TEXT_SECTIONS.map(({ step, legend, anchor, fields, choices }) => (
             <Card key={legend} {...tourAnchor(anchor)}>
               <CardContent>
                 <FieldSet disabled={!documentsRead}>
@@ -563,7 +695,10 @@ export function SubmissionForm({
                       </FieldDescription>
                     </div>
                   )}
-                  <SectionFields>{fields.map(renderTextField)}</SectionFields>
+                  <SectionFields>
+                    {fields.map(renderTextField)}
+                    {choices.map(renderChoiceField)}
+                  </SectionFields>
                 </FieldSet>
               </CardContent>
             </Card>

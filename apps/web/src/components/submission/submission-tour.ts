@@ -31,6 +31,12 @@ const TOUR_STEPS = [
       "Revisa que coincida con tu comprobante de domicilio y completa lo que falte.",
   },
   {
+    anchor: "beneficiary",
+    title: "Beneficiario",
+    description:
+      "Escribe el nombre de la persona que designas como beneficiaria y elige qué parentesco tiene contigo.",
+  },
+  {
     anchor: "submit",
     title: "Enviar",
     description:

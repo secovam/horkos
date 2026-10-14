@@ -17,6 +17,19 @@ export const DOCUMENT_KIND_VALUES = [
 
 const now = sql`(cast(unixepoch('subsecond') * 1000 as integer))`;
 
+export const MARITAL_STATUS_VALUES = [
+  "single",
+  "married",
+  "common_law",
+] as const;
+
+export const RELATIONSHIP_VALUES = [
+  "parent",
+  "sibling",
+  "spouse",
+  "child",
+] as const;
+
 export const submission = sqliteTable("submission", {
   invitationId: text("invitation_id")
     .primaryKey()
@@ -32,6 +45,13 @@ export const submission = sqliteTable("submission", {
   postalCode: text("postal_code").notNull(),
   city: text("city").notNull(),
   state: text("state").notNull(),
+  // Nullable only because submissions sent before these fields existed lack them; the form requires them.
+  maritalStatus: text("marital_status", { enum: MARITAL_STATUS_VALUES }),
+  phone: text("phone"),
+  beneficiaryName: text("beneficiary_name"),
+  beneficiaryRelationship: text("beneficiary_relationship", {
+    enum: RELATIONSHIP_VALUES,
+  }),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .default(now)
     .notNull(),

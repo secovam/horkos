@@ -40,15 +40,23 @@ const LABELS = {
 } as const;
 
 const FILLED_BY_HAND = {
+  Teléfono: "55 1234 5678",
   "Municipio o alcaldía": "Benito Juárez",
   Estado: "Ciudad de México",
+  "Nombre del beneficiario": "Luis Ficticio Prueba",
 } as const;
 
 async function fillByHand(page: Page) {
+  await page.getByLabel("Estado civil", { exact: true }).click();
+  await page.getByRole("option", { name: "Casado/a" }).click();
+
   for (const [label, value] of Object.entries(FILLED_BY_HAND)) {
     // oxlint-disable-next-line no-await-in-loop -- Fields are filled in reading order like a person would.
     await page.getByLabel(label, { exact: true }).fill(value);
   }
+
+  await page.getByLabel("Parentesco", { exact: true }).click();
+  await page.getByRole("option", { name: "Hermano/a" }).click();
 }
 
 function extractedBadge(page: Page, label: string) {
@@ -223,6 +231,10 @@ test("employee uploads documents, reviews the prefilled data and submits; HR see
       suburb: "CENTRO",
       postal_code: "01000",
       city: "Benito Juárez",
+      marital_status: "married",
+      phone: "5512345678",
+      beneficiary_name: "Luis Ficticio Prueba",
+      beneficiary_relationship: "sibling",
       state: "Ciudad de México",
     });
 
@@ -569,7 +581,7 @@ test("the data fields stay locked until all three documents are read", async ({
       employee.getByText(
         "Se habilita cuando terminemos de leer tus 3 documentos."
       )
-    ).toHaveCount(2);
+    ).toHaveCount(3);
 
     await employee
       .getByRole("button", { name: "Enviar mi información" })
@@ -664,7 +676,7 @@ test("employee gets a guided tour once and can replay it", async ({
 
     await desktop.goto(link);
     await expect(popover).toContainText("Antes de empezar");
-    await expect(popover).toContainText("1 de 5");
+    await expect(popover).toContainText("1 de 6");
     await expectOnScreen(popover);
     await expect(
       popover.getByRole("button", { name: "Cerrar guía" })
@@ -676,7 +688,7 @@ test("employee gets a guided tour once and can replay it", async ({
 
     await popover.getByRole("button", { name: "Siguiente" }).click();
     await expect(popover).toContainText("Documentos");
-    await expect(popover).toContainText("2 de 5");
+    await expect(popover).toContainText("2 de 6");
     await expect(
       popover.getByRole("button", { name: "Anterior" })
     ).toBeVisible();
@@ -689,7 +701,12 @@ test("employee gets a guided tour once and can replay it", async ({
       animations: "disabled",
     });
 
-    for (const title of ["Datos personales", "Domicilio", "Enviar"]) {
+    for (const title of [
+      "Datos personales",
+      "Domicilio",
+      "Beneficiario",
+      "Enviar",
+    ]) {
       // oxlint-disable-next-line no-await-in-loop -- Steps are walked in order like a person would.
       await popover.getByRole("button", { name: /Siguiente|Listo/u }).click();
       // oxlint-disable-next-line no-await-in-loop -- Each step is checked before moving on.
@@ -698,7 +715,7 @@ test("employee gets a guided tour once and can replay it", async ({
       await expectOnScreen(popover);
     }
 
-    await expect(popover).toContainText("5 de 5");
+    await expect(popover).toContainText("6 de 6");
     await expect(
       desktop.getByRole("button", { name: "Enviar mi información" })
     ).toBeInViewport();
@@ -718,12 +735,12 @@ test("employee gets a guided tour once and can replay it", async ({
     await expect(popover).toBeHidden();
 
     await desktop.getByRole("button", { name: "¿Cómo lleno esto?" }).click();
-    await expect(popover).toContainText("1 de 5");
+    await expect(popover).toContainText("1 de 6");
     await desktop.keyboard.press("Escape");
     await expect(popover).toBeHidden();
 
     await desktop.getByRole("button", { name: "¿Cómo lleno esto?" }).click();
-    await expect(popover).toContainText("1 de 5");
+    await expect(popover).toContainText("1 de 6");
     await desktop
       .locator(".driver-overlay")
       .click({ position: { x: 2, y: 2 } });
@@ -748,17 +765,18 @@ test("the tour sits beside each section after scrolling to it", async ({
     const popover = tourPopover(desktop);
 
     await desktop.goto(link);
-    await expect(popover).toContainText("1 de 5");
+    await expect(popover).toContainText("1 de 6");
 
     for (const [step, anchor] of [
       [2, "documents"],
       [3, "personal"],
       [4, "address"],
+      [5, "beneficiary"],
     ] as const) {
       // oxlint-disable-next-line no-await-in-loop -- Steps are walked in order like a person would.
       await popover.getByRole("button", { name: "Siguiente" }).click();
       // oxlint-disable-next-line no-await-in-loop -- Each step is checked before moving on.
-      await expect(popover).toContainText(`${step} de 5`);
+      await expect(popover).toContainText(`${step} de 6`);
       // oxlint-disable-next-line no-await-in-loop -- Each step is checked before moving on.
       await expect(async () => {
         const box = await popover.boundingBox();
