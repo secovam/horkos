@@ -46,7 +46,16 @@ export async function invite(
   name = "Verification Employee",
   email = EMPLOYEE_EMAIL
 ) {
-  await page.getByRole("button", { name: "Nueva invitación" }).first().click();
+  // A click that lands before hydration opens nothing, so it is repeated until the dialog shows.
+  await expect(async () => {
+    await page
+      .getByRole("button", { name: "Nueva invitación" })
+      .first()
+      .click();
+    await expect(page.getByLabel("Nombre del empleado")).toBeVisible({
+      timeout: 1000,
+    });
+  }).toPass();
   await page.getByLabel("Nombre del empleado").fill(name);
   await page.getByLabel("Correo electrónico", { exact: true }).fill(email);
   await page
