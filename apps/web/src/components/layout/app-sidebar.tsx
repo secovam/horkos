@@ -23,6 +23,7 @@ import {
   HouseIcon,
   LogOutIcon,
   MailIcon,
+  UsersIcon,
 } from "lucide-react";
 
 import { authClient } from "@/lib/auth-client";
@@ -30,6 +31,7 @@ import { authClient } from "@/lib/auth-client";
 const NAV_ITEMS = [
   { to: "/dashboard", label: "Inicio", icon: HouseIcon },
   { to: "/invitaciones", label: "Invitaciones", icon: MailIcon },
+  { to: "/empleados", label: "Empleados", icon: UsersIcon },
 ] as const;
 
 export function AppSidebar({

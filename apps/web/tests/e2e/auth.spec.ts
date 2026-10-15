@@ -7,7 +7,9 @@ test.describe("HR magic-link login", () => {
   }) => {
     await page.goto(`${app.baseURL}/dashboard`);
     await expect(page).toHaveURL(/\/login$/u);
-    await expect(page.getByRole("heading", { name: "Horkos" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Acceso para colaboradores" })
+    ).toBeVisible();
 
     await page
       .getByLabel("Correo electrónico")

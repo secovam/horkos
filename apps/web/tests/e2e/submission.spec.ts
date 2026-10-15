@@ -1,4 +1,4 @@
-import type { Browser, Locator, Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 import { confirmAction, invitationLink, invite, login } from "./actions";
 import { expect, test } from "./fixtures";
@@ -9,55 +9,18 @@ import {
   SEPOMEX_UNAVAILABLE_CODE,
 } from "./runtime";
 import type { LocalApp } from "./runtime";
-
-// The stand-in extractor returns whatever follows the header line as the document text.
-function pdf(text = "") {
-  return Buffer.from(`%PDF-1.4\n${text}`);
-}
-
-function pdfFile(name: string, text = "") {
-  return { name, mimeType: "application/pdf", buffer: pdf(text) };
-}
-
-const PNG = Buffer.from([
-  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x00,
-]);
-
-const SAT_TEXT = `| RFC: | XAXX010101AB1 |
-| CURP: | XEXX010101HNERXX08 |
-| Nombre (s): | MARIA |
-| Primer Apellido: | FICTICIA |
-| Segundo Apellido: | PRUEBA |`;
-
-const IMSS_TEXT = `Seguridad Social 12345678901
-Curp XEXX010101HNERXX08`;
-
-const CFE_TEXT = `COMISIÓN FEDERAL DE ELECTRICIDAD
-###### CALLE FALSA 123 CENTRO C.P. 01000`;
-
-const LABELS = {
-  taxStatus: "Constancia de situación fiscal",
-  imss: "Constancia del IMSS (NSS)",
-  proofOfAddress: "Comprobante de domicilio (Telmex o CFE)",
-} as const;
-
-const FILLED_BY_HAND = {
-  Teléfono: "55 1234 5678",
-  "Nombre del beneficiario": "Luis Ficticio Prueba",
-} as const;
-
-async function fillByHand(page: Page) {
-  await page.getByLabel("Estado civil", { exact: true }).click();
-  await page.getByRole("option", { name: "Casado/a" }).click();
-
-  for (const [label, value] of Object.entries(FILLED_BY_HAND)) {
-    // oxlint-disable-next-line no-await-in-loop -- Fields are filled in reading order like a person would.
-    await page.getByLabel(label, { exact: true }).fill(value);
-  }
-
-  await page.getByLabel("Parentesco", { exact: true }).click();
-  await page.getByRole("option", { name: "Hermano/a" }).click();
-}
+import {
+  CFE_TEXT,
+  DESKTOP,
+  IMSS_TEXT,
+  LABELS,
+  SAT_TEXT,
+  fillByHand,
+  openForm,
+  pdf,
+  pdfFile,
+  tourPopover,
+} from "./submission-flow";
 
 function extractedBadge(page: Page, label: string) {
   return page
@@ -65,12 +28,6 @@ function extractedBadge(page: Page, label: string) {
     .filter({ has: page.getByLabel(label, { exact: true }) })
     .getByText("Auto-extraído");
 }
-
-function tourPopover(page: Page) {
-  return page.locator(".driver-popover");
-}
-
-const DESKTOP = { width: 1280, height: 900 };
 
 async function expectOnScreen(locator: Locator) {
   const box = await locator.boundingBox();
@@ -83,10 +40,9 @@ async function expectOnScreen(locator: Locator) {
   );
 }
 
-async function dismissTour(page: Page) {
-  await page.getByRole("button", { name: "Cerrar guía" }).click();
-  await expect(tourPopover(page)).toBeHidden();
-}
+const PNG = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x00,
+]);
 
 function count(app: LocalApp, table: string) {
   return app.db
@@ -96,19 +52,6 @@ function count(app: LocalApp, table: string) {
 
 function row(app: LocalApp, sql: string) {
   return app.db.prepare(sql).first();
-}
-
-async function openForm(browser: Browser, app: LocalApp) {
-  const context = await browser.newContext({ viewport: DESKTOP });
-  const employee = await context.newPage();
-
-  await employee.goto(await invitationLink(app, 1));
-  await expect(
-    employee.getByRole("heading", { name: "Completa tu información" })
-  ).toBeVisible();
-  await dismissTour(employee);
-
-  return { context, employee };
 }
 
 test.beforeEach(async ({ app, page }) => {

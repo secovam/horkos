@@ -137,3 +137,32 @@ export const submissionSchema = z.object({
 export type SubmissionInput = z.input<typeof submissionSchema>;
 
 export type SubmissionFields = z.output<typeof submissionSchema>;
+
+export const SUBMISSION_SECTIONS = {
+  personal: "Datos personales",
+  address: "Domicilio",
+  beneficiary: "Beneficiario",
+} as const;
+
+export type SubmissionSection = keyof typeof SUBMISSION_SECTIONS;
+
+export const SUBMISSION_FIELDS = {
+  fullName: { label: "Nombre completo", section: "personal" },
+  rfc: { label: "RFC", section: "personal" },
+  curp: { label: "CURP", section: "personal" },
+  nss: { label: "Número de seguridad social (NSS)", section: "personal" },
+  maritalStatus: { label: "Estado civil", section: "personal" },
+  phone: { label: "Teléfono", section: "personal" },
+  street: { label: "Calle", section: "address" },
+  extNumber: { label: "Número exterior", section: "address" },
+  intNumber: { label: "Número interior (opcional)", section: "address" },
+  postalCode: { label: "Código postal", section: "address" },
+  suburb: { label: "Colonia", section: "address" },
+  city: { label: "Municipio o alcaldía", section: "address" },
+  state: { label: "Estado", section: "address" },
+  beneficiaryName: { label: "Nombre del beneficiario", section: "beneficiary" },
+  beneficiaryRelationship: { label: "Parentesco", section: "beneficiary" },
+} satisfies Record<
+  keyof SubmissionFields,
+  { label: string; section: SubmissionSection }
+>;

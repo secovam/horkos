@@ -1,5 +1,4 @@
 import { Badge } from "@horkos/ui/components/badge";
-import { Button } from "@horkos/ui/components/button";
 import {
   InputGroup,
   InputGroupAddon,
@@ -8,19 +7,13 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@horkos/ui/components/tabs";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  MailCheckIcon,
-  MailIcon,
-  MailXIcon,
-  SearchIcon,
-} from "lucide-react";
+import { MailCheckIcon, MailIcon, MailXIcon, SearchIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { InvitationsTable } from "@/components/invitations/invitations-table";
 import { NewInvitationDialog } from "@/components/invitations/new-invitation-dialog";
 import { PageHeader } from "@/components/layout/page-header";
+import { Pagination } from "@/components/layout/pagination";
 import { listInvitations } from "@/functions/invitations";
 import {
   INVITATIONS_PAGE_SIZE,
@@ -38,19 +31,6 @@ export const Route = createFileRoute("/_auth/invitaciones")({
 });
 
 const TAB_ICONS = { active: MailCheckIcon, revoked: MailXIcon } as const;
-
-function pageRange(page: number, total: number) {
-  const offset = (page - 1) * INVITATIONS_PAGE_SIZE;
-
-  if (offset >= total) {
-    return { first: 0, last: 0 };
-  }
-
-  return {
-    first: offset + 1,
-    last: Math.min(offset + INVITATIONS_PAGE_SIZE, total),
-  };
-}
 
 function InvitationsPage() {
   const search = Route.useSearch();
@@ -72,7 +52,6 @@ function InvitationsPage() {
   });
 
   const total = data?.total ?? 0;
-  const { first: firstShown, last: lastShown } = pageRange(search.page, total);
 
   return (
     <>
@@ -136,40 +115,14 @@ function InvitationsPage() {
         onRetry={() => refetch()}
       />
 
-      <nav
-        aria-label="Paginación"
-        className="text-muted-foreground flex items-center justify-between gap-4 text-sm"
-      >
-        <p>
-          Mostrando{" "}
-          <span className="text-foreground font-medium">
-            {firstShown}–{lastShown}
-          </span>{" "}
-          de <span className="text-foreground font-medium">{total}</span>
-        </p>
-        <div className="flex gap-1">
-          <Button
-            variant="ghost"
-            disabled={search.page <= 1}
-            onClick={() =>
-              navigate({ search: (prev) => ({ ...prev, page: prev.page - 1 }) })
-            }
-          >
-            <ChevronLeftIcon data-icon="inline-start" />
-            Anterior
-          </Button>
-          <Button
-            variant="ghost"
-            disabled={firstShown === 0 || lastShown >= total}
-            onClick={() =>
-              navigate({ search: (prev) => ({ ...prev, page: prev.page + 1 }) })
-            }
-          >
-            Siguiente
-            <ChevronRightIcon data-icon="inline-end" />
-          </Button>
-        </div>
-      </nav>
+      <Pagination
+        page={search.page}
+        total={total}
+        pageSize={INVITATIONS_PAGE_SIZE}
+        onPageChange={(page) =>
+          navigate({ search: (prev) => ({ ...prev, page }) })
+        }
+      />
     </>
   );
 }
