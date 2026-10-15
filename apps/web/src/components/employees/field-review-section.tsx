@@ -29,7 +29,7 @@ function FieldRow({ review }: { review: FieldReview }) {
 
   return (
     <div className="grid gap-1 py-3 sm:grid-cols-3 sm:gap-4">
-      <dt className="text-sm font-medium">
+      <dt className="text-sidebar-primary text-sm font-medium">
         {SUBMISSION_FIELDS[review.field].label}
       </dt>
       <dd className="sm:col-span-2">
@@ -67,7 +67,9 @@ export function FieldReviewSection({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
+        <CardTitle>
+          <h2 className="text-primary">{title}</h2>
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <dl className="divide-y">

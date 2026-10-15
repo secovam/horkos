@@ -44,7 +44,9 @@ export function EmployeeDocuments({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Documentos</CardTitle>
+        <CardTitle>
+          <h2 className="text-primary">Documentos</h2>
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <ul className="divide-y">
@@ -58,7 +60,7 @@ export function EmployeeDocuments({
                 className="flex flex-wrap items-start justify-between gap-3 py-3"
               >
                 <div className="grid gap-1">
-                  <h3 className="text-sm font-medium">
+                  <h3 className="text-sidebar-primary text-sm font-medium">
                     {DOCUMENT_KINDS[kind].label}
                   </h3>
                   {file ? (
