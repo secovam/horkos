@@ -26,13 +26,15 @@ import {
 import { useForm, useStore } from "@tanstack/react-form";
 import type { AnyFieldApi } from "@tanstack/react-form";
 import { BotIcon } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ComponentProps, ReactNode } from "react";
 
 import {
   tourAnchor,
   useSubmissionTour,
 } from "@/components/submission/submission-tour";
+import type { TourAnchor } from "@/components/submission/submission-tour";
+import { usePostalCode } from "@/components/submission/use-postal-code";
 import {
   submitInvitation,
   uploadDocument,
@@ -48,6 +50,7 @@ import type {
   UploadedDocuments,
 } from "@/lib/document-upload";
 import type { ExtractedFields } from "@/lib/extraction";
+import { matchSuburb } from "@/lib/postal-code";
 import {
   DOCUMENT_ACCEPT,
   DOCUMENT_KINDS,
@@ -138,29 +141,33 @@ const ADDRESS_FIELDS: readonly TextFieldConfig[] = [
     label: "Número interior (opcional)",
     autoComplete: "off",
   },
-  {
-    name: "suburb",
-    label: "Colonia",
-    autoComplete: "address-level3",
-  },
-  {
-    name: "postalCode",
-    label: "Código postal",
-    autoComplete: "postal-code",
-    inputMode: "numeric",
-    maxLength: 5,
-  },
-  {
-    name: "city",
-    label: "Municipio o alcaldía",
-    autoComplete: "address-level2",
-  },
-  {
-    name: "state",
-    label: "Estado",
-    autoComplete: "address-level1",
-  },
 ];
+
+const POSTAL_CODE_FIELD = {
+  name: "postalCode",
+  label: "Código postal",
+  autoComplete: "postal-code",
+  inputMode: "numeric",
+  maxLength: 5,
+} satisfies TextFieldConfig;
+
+const SUBURB_FIELD = {
+  name: "suburb",
+  label: "Colonia",
+  autoComplete: "address-level3",
+} satisfies TextFieldConfig;
+
+const CITY_FIELD = {
+  name: "city",
+  label: "Municipio o alcaldía",
+  autoComplete: "address-level2",
+} satisfies TextFieldConfig;
+
+const STATE_FIELD = {
+  name: "state",
+  label: "Estado",
+  autoComplete: "address-level1",
+} satisfies TextFieldConfig;
 
 const BENEFICIARY_FIELDS: readonly TextFieldConfig[] = [
   {
@@ -193,6 +200,10 @@ const CHOICE_FIELD_NAMES = [...PERSONAL_CHOICES, ...BENEFICIARY_CHOICES].map(
 const TEXT_FIELD_NAMES = [
   ...PERSONAL_FIELDS,
   ...ADDRESS_FIELDS,
+  POSTAL_CODE_FIELD,
+  SUBURB_FIELD,
+  CITY_FIELD,
+  STATE_FIELD,
   ...BENEFICIARY_FIELDS,
 ].map(({ name }) => name);
 
@@ -203,6 +214,7 @@ const TEXT_SECTIONS = [
     anchor: "personal",
     fields: PERSONAL_FIELDS,
     choices: PERSONAL_CHOICES,
+    postal: false,
   },
   {
     step: 3,
@@ -210,6 +222,7 @@ const TEXT_SECTIONS = [
     anchor: "address",
     fields: ADDRESS_FIELDS,
     choices: [],
+    postal: true,
   },
   {
     step: 4,
@@ -217,6 +230,7 @@ const TEXT_SECTIONS = [
     anchor: "beneficiary",
     fields: BENEFICIARY_FIELDS,
     choices: BENEFICIARY_CHOICES,
+    postal: false,
   },
 ] as const;
 
@@ -251,12 +265,20 @@ function TextInputField({
   maxLength,
   extracted,
   onEdit,
+  locked = false,
+  problem,
+  description,
 }: Omit<TextFieldConfig, "name"> & {
   field: AnyFieldApi;
   extracted?: string;
   onEdit: (name: TextFieldName) => void;
+  // Filled from the postal code. Its own errors stay hidden: the postal code says what to fix.
+  locked?: boolean;
+  problem?: string;
+  description?: string;
 }) {
-  const invalid = field.state.meta.errors.length > 0;
+  const errors = locked ? [] : field.state.meta.errors;
+  const invalid = problem !== undefined || errors.length > 0;
 
   return (
     <Field data-invalid={invalid}>
@@ -281,6 +303,7 @@ function TextInputField({
         autoCapitalize={autoCapitalize}
         maxLength={maxLength}
         spellCheck={false}
+        disabled={locked}
         aria-invalid={invalid}
         value={field.state.value}
         onBlur={field.handleBlur}
@@ -289,7 +312,12 @@ function TextInputField({
           field.handleChange(event.target.value);
         }}
       />
-      <FieldError errors={field.state.meta.errors} />
+      {description ? <FieldDescription>{description}</FieldDescription> : null}
+      {problem ? (
+        <FieldError>{problem}</FieldError>
+      ) : (
+        <FieldError errors={errors} />
+      )}
     </Field>
   );
 }
@@ -298,7 +326,11 @@ function ChoiceField({
   field,
   label,
   items,
-}: Omit<ChoiceFieldConfig, "name"> & { field: AnyFieldApi }) {
+  onEdit,
+}: Omit<ChoiceFieldConfig, "name"> & {
+  field: AnyFieldApi;
+  onEdit?: (name: TextFieldName) => void;
+}) {
   const invalid = field.state.meta.errors.length > 0;
 
   return (
@@ -308,7 +340,10 @@ function ChoiceField({
         name={field.name}
         items={items}
         value={field.state.value || null}
-        onValueChange={(value) => field.handleChange(value ?? "")}
+        onValueChange={(value) => {
+          onEdit?.(field.name);
+          field.handleChange(value ?? "");
+        }}
       >
         <SelectTrigger
           id={field.name}
@@ -448,6 +483,105 @@ function DocumentField({
   );
 }
 
+const EMPTY_VALUES = {
+  fullName: "",
+  rfc: "",
+  curp: "",
+  nss: "",
+  maritalStatus: "",
+  phone: "",
+  street: "",
+  extNumber: "",
+  intNumber: "",
+  suburb: "",
+  postalCode: "",
+  city: "",
+  state: "",
+  beneficiaryName: "",
+  beneficiaryRelationship: "",
+} satisfies SubmissionInput;
+
+function submissionBody(token: string, values: SubmissionInput) {
+  const body = new FormData();
+  body.set("token", token);
+
+  for (const name of [...TEXT_FIELD_NAMES, ...CHOICE_FIELD_NAMES]) {
+    body.set(name, values[name]);
+  }
+
+  return body;
+}
+
+// The data sections wait for the documents, so a late prefill never lands on what the person typed.
+function DataSection({
+  step,
+  legend,
+  anchor,
+  ready,
+  children,
+}: {
+  step: number;
+  legend: string;
+  anchor: TourAnchor;
+  ready: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Card {...tourAnchor(anchor)}>
+      <CardContent>
+        <FieldSet disabled={!ready}>
+          <SectionLegend step={step}>{legend}</SectionLegend>
+          {ready ? null : (
+            <div className="pt-2">
+              <FieldDescription>
+                Se habilita cuando terminemos de leer tus 3 documentos.
+              </FieldDescription>
+            </div>
+          )}
+          <SectionFields>{children}</SectionFields>
+        </FieldSet>
+      </CardContent>
+    </Card>
+  );
+}
+
+function FormHeader({ onTour }: { onTour: () => void }) {
+  return (
+    <header className="flex flex-col items-start gap-2">
+      <div className="flex flex-col gap-2" {...tourAnchor("welcome")}>
+        <h1 className="text-primary text-xl font-semibold text-balance">
+          Completa tu información
+        </h1>
+        <p className="text-muted-foreground text-pretty">
+          Sube tus documentos y revisa tus datos. Recursos Humanos los
+          confirmará antes de preparar tu contrato.
+        </p>
+      </div>
+      <Button type="button" variant="secondary" onClick={onTour}>
+        ¿Cómo lleno esto?
+      </Button>
+    </header>
+  );
+}
+
+function ExtractedAlert() {
+  return (
+    <Alert variant="info">
+      <BotIcon />
+      <AlertTitle>
+        Revisa los datos marcados como{" "}
+        <strong>
+          <em>Auto-extraído</em>
+        </strong>
+      </AlertTitle>
+      <AlertDescription>
+        Los leímos de tus PDF y podrían estar mal. Compáralos con tus documentos
+        y corrige lo que haga falta.
+      </AlertDescription>
+    </Alert>
+  );
+}
+
 export function SubmissionForm({
   token,
   employeeName,
@@ -473,21 +607,8 @@ export function SubmissionForm({
 
   const form = useForm({
     defaultValues: {
+      ...EMPTY_VALUES,
       fullName: employeeName,
-      rfc: "",
-      curp: "",
-      nss: "",
-      maritalStatus: "",
-      phone: "",
-      street: "",
-      extNumber: "",
-      intNumber: "",
-      suburb: "",
-      postalCode: "",
-      city: "",
-      state: "",
-      beneficiaryName: "",
-      beneficiaryRelationship: "",
       ...proposedValues(uploadsFromServer(initialDocuments)),
       files: uploadsFromServer(initialDocuments),
     },
@@ -498,21 +619,10 @@ export function SubmissionForm({
         ?.focus();
     },
     onSubmit: async ({ value }) => {
-      const body = new FormData();
-      body.set("token", token);
-
-      for (const name of TEXT_FIELD_NAMES) {
-        body.set(name, value[name]);
-      }
-
-      for (const name of CHOICE_FIELD_NAMES) {
-        body.set(name, value[name]);
-      }
-
       setSubmitError(null);
 
       try {
-        await submitInvitation({ data: body });
+        await submitInvitation({ data: submissionBody(token, value) });
       } catch (error) {
         // Inline next to the button, where the person is looking, so the error cannot be missed.
         setSubmitError(
@@ -532,6 +642,32 @@ export function SubmissionForm({
     useStore(form.store, (state) => state.values.files)
   );
 
+  const suburb = useStore(form.store, (state) => state.values.suburb);
+
+  const postal = usePostalCode(
+    token,
+    useStore(form.store, (state) => state.values.postalCode.trim())
+  );
+
+  const { area } = postal;
+
+  // The catalog owns state and municipality, and the suburb takes the catalog's spelling, or
+  // nothing when the document's suburb is not one of this postal code's.
+  useEffect(() => {
+    if (!area) {
+      return;
+    }
+
+    form.setFieldValue("city", area.municipality);
+    form.setFieldValue("state", area.state);
+
+    const listed = matchSuburb(area.suburbs, suburb) ?? "";
+
+    if (listed !== suburb) {
+      form.setFieldValue("suburb", listed);
+    }
+  }, [form, area, suburb]);
+
   function markEdited(name: TextFieldName) {
     edited.current.add(name);
   }
@@ -546,7 +682,10 @@ export function SubmissionForm({
     }
   }
 
-  function renderTextField({ name, ...config }: TextFieldConfig) {
+  function renderTextField(
+    { name, ...config }: TextFieldConfig,
+    locked = false
+  ) {
     return (
       <form.Field key={name} name={name}>
         {(field) => (
@@ -554,10 +693,54 @@ export function SubmissionForm({
             field={field}
             extracted={proposed[name]}
             onEdit={markEdited}
+            locked={locked}
             {...config}
           />
         )}
       </form.Field>
+    );
+  }
+
+  function renderPostalFields() {
+    const { locked } = postal;
+
+    return (
+      <>
+        <form.Field
+          name="postalCode"
+          validators={{ onSubmit: () => postal.blocker }}
+        >
+          {(field) => (
+            <TextInputField
+              field={field}
+              extracted={proposed.postalCode}
+              onEdit={markEdited}
+              problem={postal.problem}
+              description={postal.hint}
+              {...POSTAL_CODE_FIELD}
+            />
+          )}
+        </form.Field>
+        {area ? (
+          <form.Field name="suburb">
+            {(field) => (
+              <ChoiceField
+                field={field}
+                label={SUBURB_FIELD.label}
+                items={area.suburbs.map((name) => ({
+                  value: name,
+                  label: name,
+                }))}
+                onEdit={markEdited}
+              />
+            )}
+          </form.Field>
+        ) : (
+          renderTextField(SUBURB_FIELD, locked)
+        )}
+        {renderTextField(CITY_FIELD, locked)}
+        {renderTextField(STATE_FIELD, locked)}
+      </>
     );
   }
 
@@ -627,20 +810,7 @@ export function SubmissionForm({
         form.handleSubmit();
       }}
     >
-      <header className="flex flex-col items-start gap-2">
-        <div className="flex flex-col gap-2" {...tourAnchor("welcome")}>
-          <h1 className="text-primary text-xl font-semibold text-balance">
-            Completa tu información
-          </h1>
-          <p className="text-muted-foreground text-pretty">
-            Sube tus documentos y revisa tus datos. Recursos Humanos los
-            confirmará antes de preparar tu contrato.
-          </p>
-        </div>
-        <Button type="button" variant="secondary" onClick={startTour}>
-          ¿Cómo lleno esto?
-        </Button>
-      </header>
+      <FormHeader onTour={startTour} />
 
       <Card {...tourAnchor("documents")}>
         <CardContent>
@@ -663,46 +833,25 @@ export function SubmissionForm({
         </CardContent>
       </Card>
 
-      {Object.keys(proposed).length > 0 ? (
-        <Alert variant="info">
-          <BotIcon />
-          <AlertTitle>
-            Revisa los datos marcados como{" "}
-            <strong>
-              <em>Auto-extraído</em>
-            </strong>
-          </AlertTitle>
-          <AlertDescription>
-            Los leímos de tus PDF y podrían estar mal. Compáralos con tus
-            documentos y corrige lo que haga falta.
-          </AlertDescription>
-        </Alert>
-      ) : null}
+      {Object.keys(proposed).length > 0 ? <ExtractedAlert /> : null}
 
       <form.Subscribe
         selector={(state) => allDocumentsRead(state.values.files)}
       >
         {(documentsRead) =>
-          TEXT_SECTIONS.map(({ step, legend, anchor, fields, choices }) => (
-            <Card key={legend} {...tourAnchor(anchor)}>
-              <CardContent>
-                <FieldSet disabled={!documentsRead}>
-                  <SectionLegend step={step}>{legend}</SectionLegend>
-                  {documentsRead ? null : (
-                    <div className="pt-2">
-                      <FieldDescription>
-                        Se habilita cuando terminemos de leer tus 3 documentos.
-                      </FieldDescription>
-                    </div>
-                  )}
-                  <SectionFields>
-                    {fields.map(renderTextField)}
-                    {choices.map(renderChoiceField)}
-                  </SectionFields>
-                </FieldSet>
-              </CardContent>
-            </Card>
-          ))
+          TEXT_SECTIONS.map(
+            ({ fields, choices, postal: hasPostal, ...section }) => (
+              <DataSection
+                key={section.anchor}
+                ready={documentsRead}
+                {...section}
+              >
+                {fields.map((config) => renderTextField(config))}
+                {hasPostal ? renderPostalFields() : null}
+                {choices.map(renderChoiceField)}
+              </DataSection>
+            )
+          )
         }
       </form.Subscribe>
 

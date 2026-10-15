@@ -5,6 +5,8 @@ import { expect, test } from "./fixtures";
 import {
   EXTRACTOR_COLD_START_MARKER,
   EXTRACTOR_FAILURE_MARKER,
+  SEPOMEX_AREAS,
+  SEPOMEX_UNAVAILABLE_CODE,
 } from "./runtime";
 import type { LocalApp } from "./runtime";
 
@@ -41,8 +43,6 @@ const LABELS = {
 
 const FILLED_BY_HAND = {
   Teléfono: "55 1234 5678",
-  "Municipio o alcaldía": "Benito Juárez",
-  Estado: "Ciudad de México",
   "Nombre del beneficiario": "Luis Ficticio Prueba",
 } as const;
 
@@ -166,7 +166,16 @@ test("employee uploads documents, reviews the prefilled data and submits; HR see
       .getByLabel(LABELS.proofOfAddress)
       .setInputFiles(pdfFile("cfe.pdf", CFE_TEXT));
     await expect(employee.getByLabel("Código postal")).toHaveValue("01000");
-    await expect(employee.getByLabel("Colonia")).toHaveValue("CENTRO");
+    // The document's "CENTRO" becomes the catalog's spelling, and the catalog fills the rest.
+    await expect(employee.getByLabel("Colonia")).toContainText("Centro");
+    await expect(employee.getByLabel("Municipio o alcaldía")).toHaveValue(
+      SEPOMEX_AREAS["01000"].municipality
+    );
+    await expect(employee.getByLabel("Municipio o alcaldía")).toBeDisabled();
+    await expect(employee.getByLabel("Estado", { exact: true })).toHaveValue(
+      SEPOMEX_AREAS["01000"].state
+    );
+    await expect(employee.getByLabel("Estado", { exact: true })).toBeDisabled();
     await expect(
       employee.getByText("No parece un recibo de CFE o Telmex.")
     ).toBeHidden();
@@ -228,9 +237,9 @@ test("employee uploads documents, reviews the prefilled data and submits; HR see
       street: "Calle Escrita",
       ext_number: "123",
       int_number: null,
-      suburb: "CENTRO",
+      suburb: "Centro",
       postal_code: "01000",
-      city: "Benito Juárez",
+      city: "Álvaro Obregón",
       marital_status: "married",
       phone: "5512345678",
       beneficiary_name: "Luis Ficticio Prueba",
@@ -485,7 +494,8 @@ test("unreadable and failed documents leave the fields empty; a wrong issuer onl
 
     await fillByHand(employee);
     await employee.getByLabel("Número exterior").fill("123");
-    await employee.getByLabel("Colonia").fill("Centro");
+    await employee.getByLabel("Colonia").click();
+    await employee.getByRole("option", { name: "Centro" }).click();
     await employee.getByLabel("RFC", { exact: true }).fill("XAXX010101AB1");
     await employee.getByLabel("CURP").fill("XEXX010101HNERXX08");
     await employee
@@ -793,5 +803,62 @@ test("the tour sits beside each section after scrolling to it", async ({
     }
   } finally {
     await employee.close();
+  }
+});
+
+test("the postal code picks the suburb list; an unknown one blocks the submit and a down catalog unlocks typing", async ({
+  app,
+  browser,
+}) => {
+  const { context, employee } = await openForm(browser, app);
+
+  try {
+    for (const [label, file] of [
+      [LABELS.taxStatus, pdfFile("sat.pdf", SAT_TEXT)],
+      [LABELS.imss, pdfFile("imss.pdf", IMSS_TEXT)],
+      [LABELS.proofOfAddress, pdfFile("cfe.pdf", CFE_TEXT)],
+    ] as const) {
+      // oxlint-disable-next-line no-await-in-loop -- Documents are uploaded one after another like a person would.
+      await employee.getByLabel(label).setInputFiles(file);
+    }
+
+    await expect(employee.getByLabel("Colonia")).toContainText("Centro");
+
+    const postalCode = employee.getByLabel("Código postal");
+    const city = employee.getByLabel("Municipio o alcaldía");
+
+    await postalCode.fill("99999");
+    await expect(
+      employee.getByText("No encontramos este código postal. Revísalo.")
+    ).toBeVisible();
+    await expect(city).toBeDisabled();
+    await employee
+      .getByRole("button", { name: "Enviar mi información" })
+      .click();
+    await expect(postalCode).toBeFocused();
+    expect(await count(app, "submission")).toBe(0);
+
+    await postalCode.fill(SEPOMEX_UNAVAILABLE_CODE);
+    await expect(
+      employee.getByText(
+        "No pudimos consultar los códigos postales. Escribe colonia, municipio y estado."
+      )
+    ).toBeVisible();
+    await expect(city).toBeEnabled();
+    await expect(
+      employee.getByRole("textbox", { name: "Colonia" })
+    ).toBeEnabled();
+
+    await postalCode.fill("01000");
+    await expect(city).toHaveValue(SEPOMEX_AREAS["01000"].municipality);
+    await expect(city).toBeDisabled();
+    await employee.getByLabel("Colonia").click();
+    await expect(employee.getByRole("option")).toHaveText(
+      SEPOMEX_AREAS["01000"].suburbs
+    );
+    await employee.getByRole("option", { name: "San Ángel" }).click();
+    await expect(employee.getByLabel("Colonia")).toContainText("San Ángel");
+  } finally {
+    await context.close();
   }
 });
