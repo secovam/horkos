@@ -8,10 +8,14 @@ import {
   employeeIdSchema,
   listEmployeesSchema,
   reviewSubmission,
+  toFormValues,
 } from "@/lib/employee-record";
+import { applyPostalCode } from "@/lib/postal-code";
+import { submissionSchema } from "@/lib/submission";
 import { requireSessionMiddleware } from "@/middleware/auth";
 import { getDb } from "@/services";
 import { searchFilter } from "@/services/invitation-search";
+import { lookupPostalCode } from "@/services/sepomex";
 
 const SUBMITTED_AND_ACTIVE = and(
   isNotNull(invitation.submittedAt),
@@ -33,6 +37,7 @@ export const listEmployees = createServerFn({ method: "POST" })
           employeeName: invitation.employeeName,
           email: invitation.email,
           submittedAt: invitation.submittedAt,
+          hrCompletedAt: invitation.hrCompletedAt,
           submitted: submission,
         })
         .from(invitation)
@@ -85,6 +90,7 @@ export const getEmployee = createServerFn({ method: "POST" })
         employeeName: invitation.employeeName,
         email: invitation.email,
         submittedAt: invitation.submittedAt,
+        hrCompletedAt: invitation.hrCompletedAt,
         submitted: submission,
       })
       .from(invitation)
@@ -120,6 +126,7 @@ export const getEmployee = createServerFn({ method: "POST" })
 
     return {
       employee,
+      values: toFormValues(submitted),
       documents,
       extractions: extractions.map(({ kind, status, warnings }) => ({
         kind,
@@ -128,4 +135,106 @@ export const getEmployee = createServerFn({ method: "POST" })
       })),
       review: reviewSubmission(submitted, extractions),
     };
+  });
+
+const UNAVAILABLE_RECORD =
+  "Este expediente ya fue confirmado o ya no está disponible.";
+
+const CANNOT_REOPEN = "Este expediente no se puede reabrir.";
+
+const updateEmployeeSchema = employeeIdSchema.extend({
+  fields: submissionSchema,
+});
+
+export const updateEmployee = createServerFn({ method: "POST" })
+  .middleware([requireSessionMiddleware])
+  .validator(updateEmployeeSchema)
+  .handler(async ({ data: { invitationId, fields: typed } }) => {
+    const checked = applyPostalCode(
+      typed,
+      await lookupPostalCode(typed.postalCode)
+    );
+
+    if (!checked.ok) {
+      throw new Error(checked.message);
+    }
+
+    const { fields } = checked;
+    const db = getDb();
+
+    // One statement, so a confirmation that lands meanwhile leaves the data untouched.
+    const updated = await db
+      .update(submission)
+      .set({ ...fields, intNumber: fields.intNumber || null })
+      .where(
+        and(
+          eq(submission.invitationId, invitationId),
+          inArray(
+            submission.invitationId,
+            db
+              .select({ id: invitation.id })
+              .from(invitation)
+              .where(
+                and(
+                  eq(invitation.id, invitationId),
+                  SUBMITTED_AND_ACTIVE,
+                  isNull(invitation.hrCompletedAt)
+                )
+              )
+          )
+        )
+      )
+      .returning({ invitationId: submission.invitationId });
+
+    if (updated.length === 0) {
+      throw new Error(UNAVAILABLE_RECORD);
+    }
+
+    return { ok: true };
+  });
+
+export const confirmEmployee = createServerFn({ method: "POST" })
+  .middleware([requireSessionMiddleware])
+  .validator(employeeIdSchema)
+  .handler(async ({ data: { invitationId } }) => {
+    const updated = await getDb()
+      .update(invitation)
+      .set({ hrCompletedAt: new Date() })
+      .where(
+        and(
+          eq(invitation.id, invitationId),
+          SUBMITTED_AND_ACTIVE,
+          isNull(invitation.hrCompletedAt)
+        )
+      )
+      .returning({ id: invitation.id });
+
+    if (updated.length === 0) {
+      throw new Error(UNAVAILABLE_RECORD);
+    }
+
+    return { ok: true };
+  });
+
+export const reopenEmployee = createServerFn({ method: "POST" })
+  .middleware([requireSessionMiddleware])
+  .validator(employeeIdSchema)
+  .handler(async ({ data: { invitationId } }) => {
+    const updated = await getDb()
+      .update(invitation)
+      .set({ hrCompletedAt: null })
+      .where(
+        and(
+          eq(invitation.id, invitationId),
+          isNotNull(invitation.hrCompletedAt),
+          isNull(invitation.contractGeneratedAt)
+        )
+      )
+      .returning({ id: invitation.id });
+
+    if (updated.length === 0) {
+      throw new Error(CANNOT_REOPEN);
+    }
+
+    return { ok: true };
   });

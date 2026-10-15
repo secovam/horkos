@@ -6,13 +6,10 @@ import {
   CardTitle,
 } from "@horkos/ui/components/card";
 
+import { FieldProposals } from "@/components/employees/field-proposals";
 import { displayValue } from "@/lib/employee-record";
 import type { FieldReview, FieldStatus } from "@/lib/employee-record";
-import {
-  DOCUMENT_KINDS,
-  SUBMISSION_FIELDS,
-  SUBMISSION_SECTIONS,
-} from "@/lib/submission";
+import { SUBMISSION_FIELDS, SUBMISSION_SECTIONS } from "@/lib/submission";
 import type { SubmissionSection } from "@/lib/submission";
 
 const STATUS_BADGES = {
@@ -35,18 +32,11 @@ function FieldRow({ review }: { review: FieldReview }) {
       <dd className="sm:col-span-2">
         <p>
           <span className="text-muted-foreground text-xs">
-            Enviado por el empleado:{" "}
+            Dato registrado:{" "}
           </span>
           <span>{displayValue(review.field, review.submitted)}</span>
         </p>
-        {review.proposals.map(({ kind, value }) => (
-          <p key={kind}>
-            <span className="text-muted-foreground text-xs">
-              {DOCUMENT_KINDS[kind].label}:{" "}
-            </span>
-            <span>{displayValue(review.field, value)}</span>
-          </p>
-        ))}
+        <FieldProposals review={review} />
         <div className="mt-1">
           <Badge variant={badge.variant}>{badge.label}</Badge>
         </div>

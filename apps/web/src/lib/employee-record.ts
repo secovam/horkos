@@ -10,7 +10,11 @@ import {
   RELATIONSHIP_LIST,
   submissionSchema,
 } from "./submission";
-import type { DocumentKind, SubmissionFields } from "./submission";
+import type {
+  DocumentKind,
+  SubmissionFields,
+  SubmissionInput,
+} from "./submission";
 
 export type SubmittedValues = Record<keyof SubmissionFields, string | null>;
 
@@ -88,6 +92,33 @@ function reviewField(
     status: proposals.every(({ value }) => agrees(value))
       ? "matches"
       : "differs",
+  };
+}
+
+export type RecordState = "in_review" | "confirmed";
+
+export function recordState(hrCompletedAt: Date | null): RecordState {
+  return hrCompletedAt ? "confirmed" : "in_review";
+}
+
+// The form works with strings only, so a value the employee never gave starts empty.
+export function toFormValues(submission: SubmittedValues): SubmissionInput {
+  return {
+    fullName: submission.fullName ?? "",
+    rfc: submission.rfc ?? "",
+    curp: submission.curp ?? "",
+    nss: submission.nss ?? "",
+    maritalStatus: submission.maritalStatus ?? "",
+    phone: submission.phone ?? "",
+    street: submission.street ?? "",
+    extNumber: submission.extNumber ?? "",
+    intNumber: submission.intNumber ?? "",
+    suburb: submission.suburb ?? "",
+    postalCode: submission.postalCode ?? "",
+    city: submission.city ?? "",
+    state: submission.state ?? "",
+    beneficiaryName: submission.beneficiaryName ?? "",
+    beneficiaryRelationship: submission.beneficiaryRelationship ?? "",
   };
 }
 

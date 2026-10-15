@@ -13,6 +13,7 @@ import { SearchXIcon, TriangleAlertIcon, UsersIcon } from "lucide-react";
 
 import { EmptyStateCard } from "@/components/invitations/invitations-empty-state";
 import type { listEmployees } from "@/functions/employees";
+import { recordState } from "@/lib/employee-record";
 
 interface EmployeesTableProps {
   rows: Awaited<ReturnType<typeof listEmployees>>["rows"] | undefined;
@@ -62,6 +63,22 @@ function StatusContent({ rows, isError, q, onRetry }: EmployeesTableProps) {
   );
 }
 
+function ReviewBadge({
+  employee,
+}: {
+  employee: { hrCompletedAt: Date | null; needsAttention: boolean };
+}) {
+  if (recordState(employee.hrCompletedAt) === "confirmed") {
+    return <Badge variant="default">Confirmado</Badge>;
+  }
+
+  return employee.needsAttention ? (
+    <Badge variant="destructive">Revisar</Badge>
+  ) : (
+    <Badge variant="secondary">Sin diferencias</Badge>
+  );
+}
+
 export function EmployeesTable(props: EmployeesTableProps) {
   return (
     <div className="overflow-hidden rounded-xl border">
@@ -94,11 +111,7 @@ export function EmployeesTable(props: EmployeesTableProps) {
                 </span>
               </TableCell>
               <TableCell>
-                {employee.needsAttention ? (
-                  <Badge variant="destructive">Revisar</Badge>
-                ) : (
-                  <Badge variant="secondary">Sin diferencias</Badge>
-                )}
+                <ReviewBadge employee={employee} />
               </TableCell>
               <TableCell>
                 <div className="flex justify-end">
