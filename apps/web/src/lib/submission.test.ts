@@ -13,6 +13,8 @@ const valid = {
   rfc: " xaxx010101abc ",
   curp: "xexx010101hnerxx08",
   nss: "12345678901",
+  maritalStatus: "single",
+  phone: "55 1234-5678",
   street: "Calle Falsa",
   extNumber: "123",
   intNumber: "",
@@ -20,6 +22,8 @@ const valid = {
   postalCode: "01000",
   city: "Benito Juárez",
   state: "Ciudad de México",
+  beneficiaryName: "Luis Prueba López",
+  beneficiaryRelationship: "sibling",
 };
 
 describe("detectDocumentType", () => {
@@ -77,6 +81,7 @@ describe("submissionSchema", () => {
       rfc: "XAXX010101ABC",
       curp: "XEXX010101HNERXX08",
       intNumber: "",
+      phone: "5512345678",
     });
   });
 
@@ -91,6 +96,13 @@ describe("submissionSchema", () => {
     ["postalCode", "010000"],
     ["fullName", "   "],
     ["street", ""],
+    ["maritalStatus", ""],
+    ["maritalStatus", "divorced"],
+    ["phone", "551234567"],
+    ["phone", "+52 55 1234 5678"],
+    ["beneficiaryName", " "],
+    ["beneficiaryRelationship", ""],
+    ["beneficiaryRelationship", "Hermano"],
   ])("rejects %s = %j", (field, value) => {
     expect(
       submissionSchema.safeParse({ ...valid, [field]: value }).success

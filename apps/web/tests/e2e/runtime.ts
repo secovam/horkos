@@ -18,6 +18,17 @@ export const EXTRACTOR_FAILURE_MARKER = "EXTRACTOR_FAILURE";
 // Fails the first read of a document, like a container that has not finished starting.
 export const EXTRACTOR_COLD_START_MARKER = "EXTRACTOR_COLD_START";
 
+// The stand-in Sepomex knows only these postal codes and answers 500 for the unavailable one.
+export const SEPOMEX_AREAS = {
+  "01000": {
+    state: "Ciudad de México",
+    municipality: "Álvaro Obregón",
+    suburbs: ["Centro", "San Ángel"],
+  },
+};
+
+export const SEPOMEX_UNAVAILABLE_CODE = "00000";
+
 const COMPATIBILITY_DATE = "2026-07-30";
 
 const capturedMailSchema = z.object({
@@ -94,7 +105,10 @@ export default { fetch: (request, env, context) => app.fetch(request, env, conte
             },
           },
           serviceBindings: { EMAIL: { name: "mailer", entrypoint: "Mailer" } },
+          // Every outbound fetch lands on the stand-in, so tests never reach the real catalog.
+          outboundService: "sepomex",
           bindings: {
+            SEPOMEX_URL: "https://sepomex.test",
             BETTER_AUTH_SECRET: "test-only-secret-with-at-least-32-characters",
             BETTER_AUTH_URL: "http://127.0.0.1",
             EMAIL_FROM: "Horkos Pruebas <verify@example.test>",
@@ -124,6 +138,25 @@ export default { fetch: (request, env, context) => app.fetch(request, env, conte
             export default { fetch() { return new Response("ok"); } };`,
           compatibilityDate: COMPATIBILITY_DATE,
           durableObjects: { EXTRACTOR: "Extractor" },
+        },
+        {
+          name: "sepomex",
+          modules: true,
+          script: `const areas = ${JSON.stringify(SEPOMEX_AREAS)};
+            export default {
+              fetch(request) {
+                const code = new URL(request.url).searchParams.get("zip_code");
+                if (code === "${SEPOMEX_UNAVAILABLE_CODE}") {
+                  return new Response("down", { status: 500 });
+                }
+                const area = areas[code];
+                const zip_codes = (area?.suburbs ?? []).map((d_asenta) => ({
+                  d_codigo: code, d_asenta, d_mnpio: area.municipality, d_estado: area.state,
+                }));
+                return Response.json({ zip_codes });
+              },
+            };`,
+          compatibilityDate: COMPATIBILITY_DATE,
         },
         {
           name: "mailer",

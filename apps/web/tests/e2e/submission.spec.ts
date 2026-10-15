@@ -5,6 +5,8 @@ import { expect, test } from "./fixtures";
 import {
   EXTRACTOR_COLD_START_MARKER,
   EXTRACTOR_FAILURE_MARKER,
+  SEPOMEX_AREAS,
+  SEPOMEX_UNAVAILABLE_CODE,
 } from "./runtime";
 import type { LocalApp } from "./runtime";
 
@@ -40,15 +42,21 @@ const LABELS = {
 } as const;
 
 const FILLED_BY_HAND = {
-  "Municipio o alcaldía": "Benito Juárez",
-  Estado: "Ciudad de México",
+  Teléfono: "55 1234 5678",
+  "Nombre del beneficiario": "Luis Ficticio Prueba",
 } as const;
 
 async function fillByHand(page: Page) {
+  await page.getByLabel("Estado civil", { exact: true }).click();
+  await page.getByRole("option", { name: "Casado/a" }).click();
+
   for (const [label, value] of Object.entries(FILLED_BY_HAND)) {
     // oxlint-disable-next-line no-await-in-loop -- Fields are filled in reading order like a person would.
     await page.getByLabel(label, { exact: true }).fill(value);
   }
+
+  await page.getByLabel("Parentesco", { exact: true }).click();
+  await page.getByRole("option", { name: "Hermano/a" }).click();
 }
 
 function extractedBadge(page: Page, label: string) {
@@ -158,7 +166,16 @@ test("employee uploads documents, reviews the prefilled data and submits; HR see
       .getByLabel(LABELS.proofOfAddress)
       .setInputFiles(pdfFile("cfe.pdf", CFE_TEXT));
     await expect(employee.getByLabel("Código postal")).toHaveValue("01000");
-    await expect(employee.getByLabel("Colonia")).toHaveValue("CENTRO");
+    // The document's "CENTRO" becomes the catalog's spelling, and the catalog fills the rest.
+    await expect(employee.getByLabel("Colonia")).toContainText("Centro");
+    await expect(employee.getByLabel("Municipio o alcaldía")).toHaveValue(
+      SEPOMEX_AREAS["01000"].municipality
+    );
+    await expect(employee.getByLabel("Municipio o alcaldía")).toBeDisabled();
+    await expect(employee.getByLabel("Estado", { exact: true })).toHaveValue(
+      SEPOMEX_AREAS["01000"].state
+    );
+    await expect(employee.getByLabel("Estado", { exact: true })).toBeDisabled();
     await expect(
       employee.getByText("No parece un recibo de CFE o Telmex.")
     ).toBeHidden();
@@ -220,9 +237,13 @@ test("employee uploads documents, reviews the prefilled data and submits; HR see
       street: "Calle Escrita",
       ext_number: "123",
       int_number: null,
-      suburb: "CENTRO",
+      suburb: "Centro",
       postal_code: "01000",
-      city: "Benito Juárez",
+      city: "Álvaro Obregón",
+      marital_status: "married",
+      phone: "5512345678",
+      beneficiary_name: "Luis Ficticio Prueba",
+      beneficiary_relationship: "sibling",
       state: "Ciudad de México",
     });
 
@@ -473,7 +494,8 @@ test("unreadable and failed documents leave the fields empty; a wrong issuer onl
 
     await fillByHand(employee);
     await employee.getByLabel("Número exterior").fill("123");
-    await employee.getByLabel("Colonia").fill("Centro");
+    await employee.getByLabel("Colonia").click();
+    await employee.getByRole("option", { name: "Centro" }).click();
     await employee.getByLabel("RFC", { exact: true }).fill("XAXX010101AB1");
     await employee.getByLabel("CURP").fill("XEXX010101HNERXX08");
     await employee
@@ -569,7 +591,7 @@ test("the data fields stay locked until all three documents are read", async ({
       employee.getByText(
         "Se habilita cuando terminemos de leer tus 3 documentos."
       )
-    ).toHaveCount(2);
+    ).toHaveCount(3);
 
     await employee
       .getByRole("button", { name: "Enviar mi información" })
@@ -664,7 +686,7 @@ test("employee gets a guided tour once and can replay it", async ({
 
     await desktop.goto(link);
     await expect(popover).toContainText("Antes de empezar");
-    await expect(popover).toContainText("1 de 5");
+    await expect(popover).toContainText("1 de 6");
     await expectOnScreen(popover);
     await expect(
       popover.getByRole("button", { name: "Cerrar guía" })
@@ -676,7 +698,7 @@ test("employee gets a guided tour once and can replay it", async ({
 
     await popover.getByRole("button", { name: "Siguiente" }).click();
     await expect(popover).toContainText("Documentos");
-    await expect(popover).toContainText("2 de 5");
+    await expect(popover).toContainText("2 de 6");
     await expect(
       popover.getByRole("button", { name: "Anterior" })
     ).toBeVisible();
@@ -689,7 +711,12 @@ test("employee gets a guided tour once and can replay it", async ({
       animations: "disabled",
     });
 
-    for (const title of ["Datos personales", "Domicilio", "Enviar"]) {
+    for (const title of [
+      "Datos personales",
+      "Domicilio",
+      "Beneficiario",
+      "Enviar",
+    ]) {
       // oxlint-disable-next-line no-await-in-loop -- Steps are walked in order like a person would.
       await popover.getByRole("button", { name: /Siguiente|Listo/u }).click();
       // oxlint-disable-next-line no-await-in-loop -- Each step is checked before moving on.
@@ -698,7 +725,7 @@ test("employee gets a guided tour once and can replay it", async ({
       await expectOnScreen(popover);
     }
 
-    await expect(popover).toContainText("5 de 5");
+    await expect(popover).toContainText("6 de 6");
     await expect(
       desktop.getByRole("button", { name: "Enviar mi información" })
     ).toBeInViewport();
@@ -718,12 +745,12 @@ test("employee gets a guided tour once and can replay it", async ({
     await expect(popover).toBeHidden();
 
     await desktop.getByRole("button", { name: "¿Cómo lleno esto?" }).click();
-    await expect(popover).toContainText("1 de 5");
+    await expect(popover).toContainText("1 de 6");
     await desktop.keyboard.press("Escape");
     await expect(popover).toBeHidden();
 
     await desktop.getByRole("button", { name: "¿Cómo lleno esto?" }).click();
-    await expect(popover).toContainText("1 de 5");
+    await expect(popover).toContainText("1 de 6");
     await desktop
       .locator(".driver-overlay")
       .click({ position: { x: 2, y: 2 } });
@@ -748,17 +775,18 @@ test("the tour sits beside each section after scrolling to it", async ({
     const popover = tourPopover(desktop);
 
     await desktop.goto(link);
-    await expect(popover).toContainText("1 de 5");
+    await expect(popover).toContainText("1 de 6");
 
     for (const [step, anchor] of [
       [2, "documents"],
       [3, "personal"],
       [4, "address"],
+      [5, "beneficiary"],
     ] as const) {
       // oxlint-disable-next-line no-await-in-loop -- Steps are walked in order like a person would.
       await popover.getByRole("button", { name: "Siguiente" }).click();
       // oxlint-disable-next-line no-await-in-loop -- Each step is checked before moving on.
-      await expect(popover).toContainText(`${step} de 5`);
+      await expect(popover).toContainText(`${step} de 6`);
       // oxlint-disable-next-line no-await-in-loop -- Each step is checked before moving on.
       await expect(async () => {
         const box = await popover.boundingBox();
@@ -775,5 +803,62 @@ test("the tour sits beside each section after scrolling to it", async ({
     }
   } finally {
     await employee.close();
+  }
+});
+
+test("the postal code picks the suburb list; an unknown one blocks the submit and a down catalog unlocks typing", async ({
+  app,
+  browser,
+}) => {
+  const { context, employee } = await openForm(browser, app);
+
+  try {
+    for (const [label, file] of [
+      [LABELS.taxStatus, pdfFile("sat.pdf", SAT_TEXT)],
+      [LABELS.imss, pdfFile("imss.pdf", IMSS_TEXT)],
+      [LABELS.proofOfAddress, pdfFile("cfe.pdf", CFE_TEXT)],
+    ] as const) {
+      // oxlint-disable-next-line no-await-in-loop -- Documents are uploaded one after another like a person would.
+      await employee.getByLabel(label).setInputFiles(file);
+    }
+
+    await expect(employee.getByLabel("Colonia")).toContainText("Centro");
+
+    const postalCode = employee.getByLabel("Código postal");
+    const city = employee.getByLabel("Municipio o alcaldía");
+
+    await postalCode.fill("99999");
+    await expect(
+      employee.getByText("No encontramos este código postal. Revísalo.")
+    ).toBeVisible();
+    await expect(city).toBeDisabled();
+    await employee
+      .getByRole("button", { name: "Enviar mi información" })
+      .click();
+    await expect(postalCode).toBeFocused();
+    expect(await count(app, "submission")).toBe(0);
+
+    await postalCode.fill(SEPOMEX_UNAVAILABLE_CODE);
+    await expect(
+      employee.getByText(
+        "No pudimos consultar los códigos postales. Escribe colonia, municipio y estado."
+      )
+    ).toBeVisible();
+    await expect(city).toBeEnabled();
+    await expect(
+      employee.getByRole("textbox", { name: "Colonia" })
+    ).toBeEnabled();
+
+    await postalCode.fill("01000");
+    await expect(city).toHaveValue(SEPOMEX_AREAS["01000"].municipality);
+    await expect(city).toBeDisabled();
+    await employee.getByLabel("Colonia").click();
+    await expect(employee.getByRole("option")).toHaveText(
+      SEPOMEX_AREAS["01000"].suburbs
+    );
+    await employee.getByRole("option", { name: "San Ángel" }).click();
+    await expect(employee.getByLabel("Colonia")).toContainText("San Ángel");
+  } finally {
+    await context.close();
   }
 });

@@ -47,6 +47,40 @@ export const documentFileSchema = z
     "El archivo pesa más de 10 MB."
   );
 
+export const MARITAL_STATUS_LIST = ["single", "married", "common_law"] as const;
+
+export type MaritalStatus = (typeof MARITAL_STATUS_LIST)[number];
+
+export const MARITAL_STATUSES = {
+  single: { label: "Soltero/a" },
+  married: { label: "Casado/a" },
+  common_law: { label: "Unión libre" },
+} satisfies Record<MaritalStatus, { label: string }>;
+
+export const RELATIONSHIP_LIST = [
+  "parent",
+  "sibling",
+  "spouse",
+  "child",
+] as const;
+
+export type Relationship = (typeof RELATIONSHIP_LIST)[number];
+
+export const RELATIONSHIPS = {
+  parent: { label: "Padre/Madre" },
+  sibling: { label: "Hermano/a" },
+  spouse: { label: "Cónyuge" },
+  child: { label: "Hijo/a" },
+} satisfies Record<Relationship, { label: string }>;
+
+// A string first, so the form can start with nothing chosen.
+function choice<const T extends readonly [string, ...string[]]>(
+  values: T,
+  error: string
+) {
+  return z.string({ error }).pipe(z.enum(values, { error }));
+}
+
 function required(label: string) {
   return z
     .string()
@@ -77,6 +111,12 @@ export const submissionSchema = z.object({
     .string()
     .trim()
     .regex(/^\d{11}$/u, "El NSS tiene 11 dígitos."),
+  maritalStatus: choice(MARITAL_STATUS_LIST, "Elige tu estado civil."),
+  // Spaces, dashes and parentheses are how people write a number, so only the digits count.
+  phone: z
+    .string()
+    .transform((value) => value.replaceAll(/[\s()-]/gu, ""))
+    .pipe(z.string().regex(/^\d{10}$/u, "El teléfono tiene 10 dígitos.")),
   street: required("tu calle"),
   extNumber: required("tu número exterior"),
   intNumber: z.string().trim().max(50, "Es demasiado largo."),
@@ -87,6 +127,11 @@ export const submissionSchema = z.object({
     .regex(/^\d{5}$/u, "El código postal tiene 5 dígitos."),
   city: required("tu municipio"),
   state: required("tu estado"),
+  beneficiaryName: required("el nombre de tu beneficiario"),
+  beneficiaryRelationship: choice(
+    RELATIONSHIP_LIST,
+    "Elige el parentesco con tu beneficiario."
+  ),
 });
 
 export type SubmissionInput = z.input<typeof submissionSchema>;

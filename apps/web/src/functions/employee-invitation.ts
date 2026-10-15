@@ -9,6 +9,7 @@ import { ENV } from "@/env.server";
 import type { UploadedDocuments } from "@/lib/document-upload";
 import { FAILED_EXTRACTION } from "@/lib/extraction";
 import { hashInvitationToken } from "@/lib/invitation";
+import { POSTAL_CODE_REGEX, applyPostalCode } from "@/lib/postal-code";
 import {
   DOCUMENT_KINDS,
   DOCUMENT_KIND_LIST,
@@ -19,6 +20,7 @@ import {
 } from "@/lib/submission";
 import { getDb } from "@/services";
 import { extractDocument } from "@/services/extractor";
+import { lookupPostalCode } from "@/services/sepomex";
 
 // Public: the token is the credential. Unknown and revoked tokens get the same answer.
 // POST keeps the token out of the server function URL.
@@ -218,6 +220,20 @@ export const uploadDocument = createServerFn({ method: "POST" })
     }
   });
 
+// Behind the token so the endpoint is not an open proxy to the catalog.
+export const findPostalCode = createServerFn({ method: "POST" })
+  .validator(
+    z.object({
+      token: z.string(),
+      postalCode: z.string().regex(POSTAL_CODE_REGEX),
+    })
+  )
+  .handler(async ({ data }) => {
+    await findOpenInvitation(data.token);
+
+    return lookupPostalCode(data.postalCode);
+  });
+
 function parseSubmissionForm(form: FormData) {
   const token = z.string().min(1).safeParse(form.get("token"));
 
@@ -251,9 +267,20 @@ function asSelection<T extends Record<string, unknown>>(values: T) {
 
 export const submitInvitation = createServerFn({ method: "POST" })
   .validator(parseSubmissionForm)
-  .handler(async ({ data: { token, fields } }) => {
+  .handler(async ({ data: { token, fields: typed } }) => {
     const db = getDb();
     const found = await findOpenInvitation(token);
+
+    const checked = applyPostalCode(
+      typed,
+      await lookupPostalCode(typed.postalCode)
+    );
+
+    if (!checked.ok) {
+      throw new Error(checked.message);
+    }
+
+    const { fields } = checked;
 
     const uploaded = await db
       .select({ kind: document.kind })

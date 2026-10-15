@@ -49,6 +49,7 @@ export const web = Cloudflare.Website.Vite("web", {
     EXTRACTOR: extractor,
     EMAIL: Cloudflare.Email.SendEmail("EMAIL"),
     EMAIL_FROM: Config.String("EMAIL_FROM"),
+    SEPOMEX_URL: Config.String("SEPOMEX_URL"),
     BETTER_AUTH_SECRET: Config.Redacted("BETTER_AUTH_SECRET"),
     // portless sets PORTLESS_URL only under `pnpm dev`; auth origins must match it
     BETTER_AUTH_URL: process.env.PORTLESS_URL ?? Cloudflare.Worker.URL,
