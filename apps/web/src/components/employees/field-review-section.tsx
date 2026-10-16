@@ -15,10 +15,10 @@ import type { SubmissionSection } from "@/lib/submission";
 const STATUS_BADGES = {
   matches: { variant: "secondary", label: "Coincide" },
   differs: { variant: "destructive", label: "Difiere" },
-  not_extracted: { variant: "outline", label: "Ningún documento lo propuso" },
+  not_extracted: null,
 } as const satisfies Record<
   FieldStatus,
-  { variant: "secondary" | "destructive" | "outline"; label: string }
+  { variant: "secondary" | "destructive"; label: string } | null
 >;
 
 function FieldRow({ review }: { review: FieldReview }) {
@@ -37,9 +37,11 @@ function FieldRow({ review }: { review: FieldReview }) {
           <span>{displayValue(review.field, review.submitted)}</span>
         </p>
         <FieldProposals review={review} />
-        <div className="mt-1">
-          <Badge variant={badge.variant}>{badge.label}</Badge>
-        </div>
+        {badge ? (
+          <div className="mt-1">
+            <Badge variant={badge.variant}>{badge.label}</Badge>
+          </div>
+        ) : null}
       </dd>
     </div>
   );

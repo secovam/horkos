@@ -56,9 +56,7 @@ test("HR reviews a submitted employee and opens their document", async ({
   await expect(nss).toContainText("Coincide");
   await expect(page.getByText("Luis Ficticio Prueba")).toBeVisible();
   await expect(page.getByText("Casado/a")).toBeVisible();
-  await expect(
-    page.getByText("Ningún documento lo propuso").first()
-  ).toBeVisible();
+  await expect(page.getByText("Ningún documento lo propuso")).toHaveCount(0);
   await page.screenshot({
     path: test.info().outputPath("employee-detail.png"),
     fullPage: true,
