@@ -1,7 +1,7 @@
 import { Badge } from "@horkos/ui/components/badge";
 import { Button, buttonVariants } from "@horkos/ui/components/button";
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
-import { ArrowLeftIcon, UserSearchIcon, UsersIcon } from "lucide-react";
+import { UserSearchIcon, UsersIcon } from "lucide-react";
 import { useState } from "react";
 
 import { EmployeeDocuments } from "@/components/employees/employee-documents";
@@ -21,7 +21,6 @@ const dateFormat = new Intl.DateTimeFormat("es-MX", {
 const SECTIONS = ["personal", "address", "beneficiary"] as const;
 
 export const Route = createFileRoute("/_auth/empleados/$invitationId")({
-  staticData: { title: "Empleado" },
   loader: async ({ params }) => {
     const employee = await getEmployee({
       data: { invitationId: params.invitationId },
@@ -31,7 +30,7 @@ export const Route = createFileRoute("/_auth/empleados/$invitationId")({
       throw notFound();
     }
 
-    return employee;
+    return { ...employee, crumb: employee.employee.employeeName };
   },
   notFoundComponent: EmployeeNotFound,
   component: EmployeePage,
@@ -83,50 +82,38 @@ function EmployeePage() {
 
   return (
     <>
-      <div className="flex flex-col gap-2">
-        <div className="flex justify-end">
-          <Link
-            className={buttonVariants({ variant: "ghost" })}
-            to="/empleados"
-          >
-            <ArrowLeftIcon data-icon="inline-start" />
-            Volver a empleados
-          </Link>
-        </div>
-
-        <PageHeader
-          icon={UsersIcon}
-          title={employee.employeeName}
-          badge={
-            <StateBadge
-              confirmed={confirmed}
-              needsAttention={review.needsAttention}
-            />
-          }
-          description={`${employee.email} · Enviado el ${
-            employee.submittedAt ? dateFormat.format(employee.submittedAt) : "—"
-          }`}
-          actions={
-            <div className="flex items-center gap-3">
-              {confirmed ? (
-                <RecordAction action="reopen" invitationId={invitationId} />
-              ) : null}
-              {confirmed || editing ? null : (
-                <>
-                  <Button variant="outline" onClick={() => setEditing(true)}>
-                    Editar datos
-                  </Button>
-                  <RecordAction
-                    action="confirm"
-                    invitationId={invitationId}
-                    needsAttention={review.needsAttention}
-                  />
-                </>
-              )}
-            </div>
-          }
-        />
-      </div>
+      <PageHeader
+        icon={UsersIcon}
+        title={employee.employeeName}
+        badge={
+          <StateBadge
+            confirmed={confirmed}
+            needsAttention={review.needsAttention}
+          />
+        }
+        description={`${employee.email} · Enviado el ${
+          employee.submittedAt ? dateFormat.format(employee.submittedAt) : "—"
+        }`}
+        actions={
+          <div className="flex items-center gap-3">
+            {confirmed ? (
+              <RecordAction action="reopen" invitationId={invitationId} />
+            ) : null}
+            {confirmed || editing ? null : (
+              <>
+                <Button variant="outline" onClick={() => setEditing(true)}>
+                  Editar datos
+                </Button>
+                <RecordAction
+                  action="confirm"
+                  invitationId={invitationId}
+                  needsAttention={review.needsAttention}
+                />
+              </>
+            )}
+          </div>
+        }
+      />
 
       {editing && !confirmed ? (
         <EmployeeEditForm

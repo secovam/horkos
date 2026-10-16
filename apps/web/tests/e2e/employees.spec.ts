@@ -183,7 +183,13 @@ test("HR corrects the data, confirms the record and reopens it", async ({
     fullPage: true,
   });
 
-  await page.getByRole("link", { name: "Volver a empleados" }).click();
+  await expect(
+    page.getByRole("navigation", { name: "breadcrumb" })
+  ).toContainText("Verification Employee");
+  await page
+    .getByRole("navigation", { name: "breadcrumb" })
+    .getByRole("link", { name: "Empleados" })
+    .click();
   await expect(
     page.getByRole("row").filter({ hasText: "employee@example.com" })
   ).toContainText("Confirmado");

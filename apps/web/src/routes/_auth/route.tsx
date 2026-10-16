@@ -19,6 +19,7 @@ import {
   redirect,
   useMatches,
 } from "@tanstack/react-router";
+import { Fragment } from "react";
 
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { getUser } from "@/functions/get-user";
@@ -41,8 +42,17 @@ export const Route = createFileRoute("/_auth")({
 function AuthLayout() {
   const { session } = Route.useRouteContext();
 
-  const title = useMatches({
-    select: (matches) => matches.at(-1)?.staticData.title,
+  const crumbs = useMatches({
+    select: (matches) =>
+      matches.flatMap((match) => {
+        const title =
+          match.staticData.title ??
+          (match.loaderData && "crumb" in match.loaderData
+            ? match.loaderData.crumb
+            : undefined);
+
+        return title ? [{ title, pathname: match.pathname }] : [];
+      }),
   });
 
   return (
@@ -61,14 +71,20 @@ function AuthLayout() {
                   Inicio
                 </BreadcrumbLink>
               </BreadcrumbItem>
-              {title ? (
-                <>
+              {crumbs.map((crumb, index) => (
+                <Fragment key={crumb.pathname}>
                   <BreadcrumbSeparator />
                   <BreadcrumbItem>
-                    <BreadcrumbPage>{title}</BreadcrumbPage>
+                    {index === crumbs.length - 1 ? (
+                      <BreadcrumbPage>{crumb.title}</BreadcrumbPage>
+                    ) : (
+                      <BreadcrumbLink render={<Link to={crumb.pathname} />}>
+                        {crumb.title}
+                      </BreadcrumbLink>
+                    )}
                   </BreadcrumbItem>
-                </>
-              ) : null}
+                </Fragment>
+              ))}
             </BreadcrumbList>
           </Breadcrumb>
         </header>

@@ -21,7 +21,6 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 export const Route = createFileRoute("/_auth/empleados/")({
   validateSearch: employeeSearchSchema,
-  staticData: { title: "Empleados" },
   component: EmployeesPage,
 });
 
