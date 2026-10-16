@@ -44,14 +44,12 @@ function AuthLayout() {
 
   const crumbs = useMatches({
     select: (matches) =>
-      matches.flatMap((match) => {
+      matches.flatMap(({ pathname, staticData, loaderData }) => {
         const title =
-          match.staticData.title ??
-          (match.loaderData && "crumb" in match.loaderData
-            ? match.loaderData.crumb
-            : undefined);
+          staticData.title ??
+          (loaderData && "crumb" in loaderData ? loaderData.crumb : null);
 
-        return title ? [{ title, pathname: match.pathname }] : [];
+        return title ? [{ title, pathname }] : [];
       }),
   });
 
