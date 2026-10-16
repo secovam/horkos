@@ -83,43 +83,50 @@ function EmployeePage() {
 
   return (
     <>
-      <PageHeader
-        icon={UsersIcon}
-        title={employee.employeeName}
-        description={`${employee.email} · Enviado el ${
-          employee.submittedAt ? dateFormat.format(employee.submittedAt) : "—"
-        }`}
-        actions={
-          <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-2">
+        <div>
+          <Link
+            className={buttonVariants({ variant: "ghost" })}
+            to="/empleados"
+          >
+            <ArrowLeftIcon data-icon="inline-start" />
+            Volver a empleados
+          </Link>
+        </div>
+
+        <PageHeader
+          icon={UsersIcon}
+          title={employee.employeeName}
+          badge={
             <StateBadge
               confirmed={confirmed}
               needsAttention={review.needsAttention}
             />
-            {confirmed ? (
-              <RecordAction action="reopen" invitationId={invitationId} />
-            ) : null}
-            {confirmed || editing ? null : (
-              <>
-                <Button variant="outline" onClick={() => setEditing(true)}>
-                  Editar datos
-                </Button>
-                <RecordAction
-                  action="confirm"
-                  invitationId={invitationId}
-                  needsAttention={review.needsAttention}
-                />
-              </>
-            )}
-            <Link
-              className={buttonVariants({ variant: "outline" })}
-              to="/empleados"
-            >
-              <ArrowLeftIcon data-icon="inline-start" />
-              Volver a empleados
-            </Link>
-          </div>
-        }
-      />
+          }
+          description={`${employee.email} · Enviado el ${
+            employee.submittedAt ? dateFormat.format(employee.submittedAt) : "—"
+          }`}
+          actions={
+            <div className="flex items-center gap-3">
+              {confirmed ? (
+                <RecordAction action="reopen" invitationId={invitationId} />
+              ) : null}
+              {confirmed || editing ? null : (
+                <>
+                  <Button variant="outline" onClick={() => setEditing(true)}>
+                    Editar datos
+                  </Button>
+                  <RecordAction
+                    action="confirm"
+                    invitationId={invitationId}
+                    needsAttention={review.needsAttention}
+                  />
+                </>
+              )}
+            </div>
+          }
+        />
+      </div>
 
       {editing && !confirmed ? (
         <EmployeeEditForm
