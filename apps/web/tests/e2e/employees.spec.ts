@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
 
-import { invite, login, toastMessage } from "./actions";
+import { clickUntil, invite, login, toastMessage } from "./actions";
 import { expect, test } from "./fixtures";
 import { openForm, submitWithAllDocuments } from "./submission-flow";
 
@@ -151,7 +151,10 @@ test("HR corrects the data, confirms the record and reopens it", async ({
   await page.reload();
   await expect(fieldRow(page, "RFC")).toContainText("XBXX020202CD3");
 
-  await page.getByRole("button", { name: "Editar datos" }).click();
+  await clickUntil(
+    page.getByRole("button", { name: "Editar datos" }),
+    page.getByLabel("RFC", { exact: true })
+  );
   await page.getByLabel("RFC", { exact: true }).fill("xaxx010101ab1");
   await page.getByRole("button", { name: "Guardar" }).click();
   await expect(toastMessage(page, "Datos guardados")).toBeVisible();
@@ -164,7 +167,10 @@ test("HR corrects the data, confirms the record and reopens it", async ({
   await expect(fieldRow(page, "RFC")).toContainText("XAXX010101AB1");
   await expect(fieldRow(page, "RFC")).toContainText("Coincide");
 
-  await page.getByRole("button", { name: "Confirmar datos" }).click();
+  await clickUntil(
+    page.getByRole("button", { name: "Confirmar datos" }),
+    page.getByRole("alertdialog")
+  );
   await expect(page.getByRole("alertdialog")).toContainText(
     "se usarán en el contrato"
   );

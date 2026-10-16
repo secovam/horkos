@@ -1,5 +1,5 @@
 import { expect } from "@playwright/test";
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 import type { CapturedMail, LocalApp } from "./runtime";
 
@@ -41,21 +41,23 @@ export async function login(app: LocalApp, page: Page) {
   await expect(page).toHaveURL(/\/dashboard$/u);
 }
 
+// A click that lands before hydration does nothing, so it is repeated until its result shows.
+export async function clickUntil(target: Locator, result: Locator) {
+  await expect(async () => {
+    await target.click();
+    await expect(result).toBeVisible({ timeout: 1000 });
+  }).toPass();
+}
+
 export async function invite(
   page: Page,
   name = "Verification Employee",
   email = EMPLOYEE_EMAIL
 ) {
-  // A click that lands before hydration opens nothing, so it is repeated until the dialog shows.
-  await expect(async () => {
-    await page
-      .getByRole("button", { name: "Nueva invitación" })
-      .first()
-      .click();
-    await expect(page.getByLabel("Nombre del empleado")).toBeVisible({
-      timeout: 1000,
-    });
-  }).toPass();
+  await clickUntil(
+    page.getByRole("button", { name: "Nueva invitación" }).first(),
+    page.getByLabel("Nombre del empleado")
+  );
   await page.getByLabel("Nombre del empleado").fill(name);
   await page.getByLabel("Correo electrónico", { exact: true }).fill(email);
   await page
