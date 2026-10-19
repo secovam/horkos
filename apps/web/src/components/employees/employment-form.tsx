@@ -43,6 +43,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 
+import { AutoExtractedBadge } from "@/components/extraction/auto-extracted-badge";
 import { saveEmployment, uploadImssRegistration } from "@/functions/employees";
 import {
   COMPANY_LIST,
@@ -227,9 +228,15 @@ function SalaryField({
 
   return (
     <Field data-invalid={errors.length > 0}>
-      <FieldLabel htmlFor="dailySalary">
-        {EMPLOYMENT_FIELDS.dailySalary.label}
-      </FieldLabel>
+      <div className="flex items-center gap-2">
+        <FieldLabel htmlFor="dailySalary">
+          {EMPLOYMENT_FIELDS.dailySalary.label}
+        </FieldLabel>
+        <AutoExtractedBadge
+          extracted={proposals.dailySalary}
+          value={field.state.value}
+        />
+      </div>
       <InputGroup>
         <InputGroupAddon>
           <InputGroupText>$</InputGroupText>
@@ -356,7 +363,15 @@ function TextField({
 
   return (
     <Field data-invalid={errors.length > 0}>
-      <FieldLabel htmlFor={name}>{EMPLOYMENT_FIELDS[name].label}</FieldLabel>
+      <div className="flex items-center gap-2">
+        <FieldLabel htmlFor={name}>{EMPLOYMENT_FIELDS[name].label}</FieldLabel>
+        {proposals && name === "hireDate" ? (
+          <AutoExtractedBadge
+            extracted={proposals.hireDate}
+            value={field.state.value}
+          />
+        ) : null}
+      </div>
       <Input
         id={name}
         name={name}
@@ -557,6 +572,7 @@ export function EmploymentForm({
             <SelectField name="sex" field={field} items={SEX_ITEMS} />
           )}
         </form.Field>
+        <ImssRegistrationField upload={upload} onPick={pick} />
         <form.Field name="hireDate">
           {(field) => (
             <TextField
@@ -567,7 +583,6 @@ export function EmploymentForm({
             />
           )}
         </form.Field>
-        <ImssRegistrationField upload={upload} onPick={pick} />
         <form.Field name="dailySalary">
           {(field) => (
             <SalaryField field={field} proposals={proposalsOf(upload)} />

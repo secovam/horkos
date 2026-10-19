@@ -242,6 +242,10 @@ test("HR corrects the data, confirms the record and reopens it", async ({
   await expect(page.getByText("Leído: $695.55")).toBeVisible();
   await expect(page.getByLabel("Salario diario")).toHaveValue("695.55");
   await expect(page.getByLabel("Fecha de ingreso")).toHaveValue("2026-03-02");
+  const autoExtracted = page.getByRole("dialog").getByText("Auto-extraído");
+  await expect(autoExtracted).toHaveCount(2);
+  await expect(autoExtracted.first()).toBeVisible();
+  await expect(autoExtracted.last()).toBeVisible();
 
   await page.getByLabel("Salario diario").fill("700");
   await page.getByLabel("Fecha de ingreso").fill("2026-03-05");
@@ -254,6 +258,8 @@ test("HR corrects the data, confirms the record and reopens it", async ({
     page.getByText("El alta del IMSS indica $695.55.")
   ).toBeVisible();
   await expect(page.getByLabel("Fecha de ingreso")).toHaveValue("2026-03-05");
+  await expect(autoExtracted.first()).toBeHidden();
+  await expect(autoExtracted.last()).toBeHidden();
   await expect(
     page.getByText("El alta del IMSS indica 2 de marzo de 2026.")
   ).toBeVisible();
