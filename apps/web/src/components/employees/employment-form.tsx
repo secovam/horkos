@@ -119,13 +119,11 @@ function describeUpload(upload: ImssUpload) {
     }
 
     case "uploaded": {
-      const { dailySalary } = proposalsOf(upload);
+      const replace = `Ya subiste ${upload.fileName}. Elige otro para reemplazarlo.`;
 
-      const read = dailySalary
-        ? `Leído: ${formatSalary(dailySalary)}`
-        : "No pudimos leer el salario, escríbelo a mano.";
-
-      return `Ya subiste ${upload.fileName}. Elige otro para reemplazarlo. ${read}`;
+      return proposalsOf(upload).dailySalary
+        ? replace
+        : `${replace} No pudimos leer el salario, escríbelo a mano.`;
     }
 
     default: {
