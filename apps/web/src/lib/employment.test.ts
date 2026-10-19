@@ -7,7 +7,6 @@ const valid = {
   personalEmail: "ana@example.com",
   jobTitle: "Analista de Compras",
   department: "Calidad",
-  manager: "",
   office: "CDMX",
   company: "SECOVAM",
   nationality: "Mexicana",
@@ -17,11 +16,10 @@ const valid = {
 };
 
 describe("employmentSchema", () => {
-  test("lowercases emails and allows an empty manager", () => {
+  test("lowercases emails", () => {
     expect(employmentSchema.parse(valid)).toMatchObject({
       workEmail: "ana.prueba@secovam.com",
       jobTitle: "Analista de Compras",
-      manager: "",
     });
   });
 
@@ -90,7 +88,6 @@ describe("employmentDefaults", () => {
       personalEmail: "ana@example.com",
       jobTitle: "Analista de calidad",
       department: "Ventas",
-      manager: null,
       office: "CDMX",
       company: "SECOVAM",
       nationality: "Mexicana",
@@ -118,7 +115,6 @@ describe("employmentDefaults", () => {
       personalEmail: "ana@example.com",
       jobTitle: "",
       department: "",
-      manager: "",
       office: "",
       company: "",
       nationality: "Mexicana",
@@ -145,11 +141,10 @@ describe("employmentDefaults", () => {
     expect(employmentDefaults(null, { ...context, curp }).sex).toBe(sex);
   });
 
-  test("prefers saved values and shows a missing manager as empty", () => {
+  test("prefers saved values and shows a missing work email as empty", () => {
     const saved = {
       ...employmentSchema.parse(valid),
       dailySalaryCents: 120_050,
-      manager: null,
       workEmail: null,
       personalEmail: "otro@example.com",
       nationality: "Colombiana",
@@ -166,7 +161,6 @@ describe("employmentDefaults", () => {
       personalEmail: "otro@example.com",
       nationality: "Colombiana",
       sex: "female",
-      manager: "",
       workEmail: "",
       company: "SECOVAM",
       hireDate: "2026-02-28",

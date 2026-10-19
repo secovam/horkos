@@ -327,7 +327,6 @@ export const saveEmployment = createServerFn({ method: "POST" })
       ...rest,
       dailySalaryCents,
       workEmail: fields.workEmail || null,
-      manager: fields.manager || null,
     };
 
     const db = getDb();
@@ -346,7 +345,6 @@ export const saveEmployment = createServerFn({ method: "POST" })
             ),
             jobTitle: sql<string>`${stored.jobTitle}`.as("job_title"),
             department: sql<string>`${stored.department}`.as("department"),
-            manager: sql<string | null>`${stored.manager}`.as("manager"),
             office: sql<string>`${stored.office}`.as("office"),
             company: sql<string>`${stored.company}`.as("company"),
             nationality: sql<string>`${stored.nationality}`.as("nationality"),

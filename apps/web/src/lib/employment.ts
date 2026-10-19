@@ -146,7 +146,6 @@ export const employmentSchema = z.object({
     .pipe(z.email("Escribe un correo personal válido.")),
   jobTitle: choice(JOB_TITLE_LIST, "Elige el puesto."),
   department: choice(DEPARTMENT_LIST, "Elige el departamento."),
-  manager: z.string().trim().max(200, "Es demasiado largo."),
   office: choice(OFFICE_LIST, "Elige la oficina."),
   company: choice(COMPANY_LIST, "Elige la empresa."),
   nationality: required("Escribe la nacionalidad."),
@@ -165,7 +164,6 @@ export const EMPLOYMENT_FIELDS = {
   personalEmail: { label: "Correo personal" },
   jobTitle: { label: "Puesto" },
   department: { label: "Departamento" },
-  manager: { label: "Jefe inmediato (opcional)" },
   office: { label: "Oficina" },
   company: { label: "Empresa" },
   nationality: { label: "Nacionalidad" },
@@ -179,7 +177,6 @@ export interface StoredEmployment {
   personalEmail: string;
   jobTitle: string;
   department: string;
-  manager: string | null;
   office: string;
   company: string;
   nationality: string;
@@ -217,7 +214,6 @@ export function employmentDefaults(
       personalEmail: saved.personalEmail,
       jobTitle: inList(JOB_TITLE_LIST, saved.jobTitle),
       department: inList(DEPARTMENT_LIST, saved.department),
-      manager: saved.manager ?? "",
       office: saved.office,
       company: saved.company,
       nationality: saved.nationality,
@@ -232,7 +228,6 @@ export function employmentDefaults(
     personalEmail: invitationEmail,
     jobTitle: "",
     department: "",
-    manager: "",
     office: "",
     company: "",
     nationality: DEFAULT_NATIONALITY,

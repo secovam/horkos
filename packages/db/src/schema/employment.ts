@@ -202,7 +202,6 @@ export const employment = sqliteTable("employment", {
   personalEmail: text("personal_email").notNull(),
   jobTitle: text("job_title", { enum: JOB_TITLE_VALUES }).notNull(),
   department: text("department", { enum: DEPARTMENT_VALUES }).notNull(),
-  manager: text("manager"),
   office: text("office", { enum: OFFICE_VALUES }).notNull(),
   company: text("company", { enum: COMPANY_VALUES }).notNull(),
   nationality: text("nationality").notNull(),

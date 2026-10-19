@@ -539,9 +539,6 @@ export function EmploymentForm({
             />
           )}
         </form.Field>
-        <form.Field name="manager">
-          {(field) => <TextField name="manager" field={field} />}
-        </form.Field>
         <form.Field name="office">
           {(field) => (
             <SelectField name="office" field={field} items={OFFICE_ITEMS} />
