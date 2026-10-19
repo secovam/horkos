@@ -48,7 +48,7 @@ The generated contract must match the template exactly and print correctly. Data
 
 ## Stack and commands
 
-TypeScript monorepo: TanStack Start web app plus shared packages, deployed to Cloudflare via Alchemy, orchestrated by Turborepo. Data and auth: Cloudflare D1 through Drizzle, Better Auth (email and password), documents in R2.
+TypeScript monorepo: TanStack Start web app plus shared packages, deployed to Cloudflare via Alchemy, orchestrated by Turborepo. Data and auth: Cloudflare D1 through Drizzle, Better Auth (magic links), documents in R2.
 
 - Package manager: **pnpm** (never `npm`/`yarn`/`bun install`). Bun is only a runtime.
 - `pnpm dev` runs everything.
