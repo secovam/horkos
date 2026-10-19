@@ -171,12 +171,6 @@ export const listEmployeesSchema = employeeSearchSchema.extend({
 
 export const employeeIdSchema = z.object({ invitationId: z.string().min(1) });
 
-export const EXTRACTION_STATUS_LABELS = {
-  extracted: "Leído",
-  unreadable: "Ilegible",
-  failed: "Falló la lectura",
-} satisfies Record<ExtractionStatus, string>;
-
 const WARNING_MESSAGES = {
   not_cfe_or_telmex: "El documento no parece un recibo de CFE o Telmex.",
 } satisfies Record<ExtractionWarning, string>;

@@ -68,6 +68,15 @@ test("HR reviews a submitted employee and opens their document", async ({
     fullPage: true,
   });
 
+  const documents = page
+    .locator("[data-slot=card]")
+    .filter({ has: page.getByRole("heading", { name: "Documentos" }) });
+
+  await expect(
+    documents.getByRole("link", { name: "Ver documento" })
+  ).toHaveCount(3);
+  await expect(documents.getByText("Leído", { exact: true })).toHaveCount(0);
+
   const link = page.getByRole("link", { name: "Ver documento" }).first();
   const href = await link.getAttribute("href");
 

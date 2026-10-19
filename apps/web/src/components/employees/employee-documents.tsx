@@ -9,10 +9,7 @@ import {
 import { ExternalLinkIcon } from "lucide-react";
 
 import type { getEmployee } from "@/functions/employees";
-import {
-  EXTRACTION_STATUS_LABELS,
-  warningMessage,
-} from "@/lib/employee-record";
+import { warningMessage } from "@/lib/employee-record";
 import type { ExtractionStatus } from "@/lib/extraction";
 import {
   STORED_DOCUMENT_KINDS,
@@ -21,11 +18,15 @@ import {
 
 type Employee = NonNullable<Awaited<ReturnType<typeof getEmployee>>>;
 
-const STATUS_VARIANTS = {
-  extracted: "secondary",
-  unreadable: "destructive",
-  failed: "destructive",
-} as const satisfies Record<ExtractionStatus, "secondary" | "destructive">;
+// A document read without trouble is the normal case, so only problems get a badge.
+const STATUS_BADGES = {
+  extracted: null,
+  unreadable: { variant: "destructive", label: "Ilegible" },
+  failed: { variant: "destructive", label: "Falló la lectura" },
+} as const satisfies Record<
+  ExtractionStatus,
+  { variant: "destructive"; label: string } | null
+>;
 
 const dateFormat = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium" });
 
@@ -56,6 +57,7 @@ export function EmployeeDocuments({
           {STORED_DOCUMENT_KIND_LIST.map((kind) => {
             const file = documents.find((item) => item.kind === kind);
             const extraction = extractions.find((item) => item.kind === kind);
+            const badge = extraction ? STATUS_BADGES[extraction.status] : null;
 
             return (
               <li
@@ -77,13 +79,12 @@ export function EmployeeDocuments({
                     </p>
                   )}
                   <div className="flex flex-wrap items-center gap-2">
-                    {extraction ? (
-                      <Badge variant={STATUS_VARIANTS[extraction.status]}>
-                        {EXTRACTION_STATUS_LABELS[extraction.status]}
-                      </Badge>
-                    ) : (
+                    {extraction ? null : (
                       <Badge variant="outline">Sin lectura</Badge>
                     )}
+                    {badge ? (
+                      <Badge variant={badge.variant}>{badge.label}</Badge>
+                    ) : null}
                     {extraction?.warnings.map((warning) => (
                       <span key={warning} className="text-sm">
                         {warningMessage(warning)}
