@@ -39,7 +39,7 @@ test("HR reviews a submitted employee and opens their document", async ({
 
   await row.getByRole("link", { name: /Ver detalle/u }).click();
   await expect(
-    page.getByRole("heading", { name: "Verification Employee" })
+    page.getByRole("heading", { name: "Maria Ficticia Prueba" })
   ).toBeVisible();
 
   const rfc = page
@@ -338,7 +338,7 @@ test("HR corrects the data, confirms the record and reopens it", async ({
 
   await expect(
     page.getByRole("navigation", { name: "breadcrumb" })
-  ).toContainText("Verification Employee");
+  ).toContainText("Maria Ficticia Prueba");
   await page
     .getByRole("navigation", { name: "breadcrumb" })
     .getByRole("link", { name: "Empleados" })

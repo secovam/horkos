@@ -111,7 +111,6 @@ export const getEmployee = createServerFn({ method: "POST" })
 
     const [found] = await db
       .select({
-        employeeName: invitation.employeeName,
         email: invitation.email,
         submittedAt: invitation.submittedAt,
         hrCompletedAt: invitation.hrCompletedAt,

@@ -34,7 +34,7 @@ export const Route = createFileRoute("/_auth/empleados/$invitationId")({
       throw notFound();
     }
 
-    return { ...employee, crumb: employee.employee.employeeName };
+    return { ...employee, crumb: employee.values.fullName };
   },
   notFoundComponent: EmployeeNotFound,
   component: EmployeePage,
@@ -100,7 +100,7 @@ function EmployeePage() {
     <>
       <PageHeader
         icon={UsersIcon}
-        title={employee.employeeName}
+        title={values.fullName}
         badge={
           <StateBadge
             confirmed={confirmed}
