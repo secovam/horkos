@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, test } from "vitest";
 
-import { parseDocument } from "./extraction";
+import { parseDocument, parseImssRegistration } from "./extraction";
 
 const SAT_CONSTANCIA = `
 # Constancia de Situación Fiscal
@@ -139,5 +139,44 @@ describe("parseDocument proof_of_address", () => {
         "Teléfonos de México\nCLL UNO 5 CENTRO C.P. 64000"
       ).warnings
     ).toEqual([]);
+  });
+});
+
+describe("parseImssRegistration", () => {
+  test.each([
+    ["Salario Diario: $ 695.55", "695.55"],
+    ["Salario Diario Integrado | 695.55 |", "695.55"],
+    ["Salario Base de Cotización: 1,234.5", "1234.50"],
+    ["Salario base de cotizacion $ 400", "400.00"],
+    ["SBC: 695.55", "695.55"],
+    ["Importe $ 695.55 pesos", "695.55"],
+  ])("reads the salary from %j", (text, dailySalary) => {
+    expect(parseImssRegistration(text)).toEqual({ dailySalary });
+  });
+
+  it("reads the insured's row of a relación de movimientos operados", () => {
+    const rows = `Relación de movimientos operados
+Registro patronal Z0000000000
+NSS Nombre Tipo Sal. Base
+12345678901 FICTICIA PRUEBA MARIA ALTA $ 1,005.20`;
+
+    expect(parseImssRegistration(rows)).toEqual({ dailySalary: "1005.20" });
+  });
+
+  it("prefers a labeled salary over any other amount", () => {
+    const text = "Cuota $ 20.00\nSalario Diario: 695.55";
+
+    expect(parseImssRegistration(text)).toEqual({ dailySalary: "695.55" });
+  });
+
+  it("proposes nothing when there is no amount", () => {
+    expect(parseImssRegistration("Alta de trabajador sin importes")).toEqual(
+      {}
+    );
+    expect(parseImssRegistration("Salario Diario: pendiente")).toEqual({});
+  });
+
+  it("drops a salary below the minimum the form accepts", () => {
+    expect(parseImssRegistration("Salario Diario: $ 200.00")).toEqual({});
   });
 });

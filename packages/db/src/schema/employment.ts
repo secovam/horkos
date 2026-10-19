@@ -49,6 +49,7 @@ export const employment = sqliteTable("employment", {
   nationality: text("nationality").notNull(),
   sex: text("sex", { enum: SEX_VALUES }).notNull(),
   hireDate: text("hire_date").notNull(),
+  dailySalaryCents: integer("daily_salary_cents").notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" })
     .default(now)
     .notNull(),

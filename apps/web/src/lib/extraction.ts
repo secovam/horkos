@@ -1,4 +1,5 @@
 /* oxlint-disable prefer-named-capture-group, sonarjs/super-linear-regex -- Patterns ported from the SAT, IMSS and utility-bill layouts; they run on at most five pages of text. */
+import { dailySalarySchema } from "./employment";
 import { submissionSchema } from "./submission";
 import type { DocumentKind, SubmissionInput } from "./submission";
 
@@ -20,6 +21,13 @@ export type ExtractionStatus = (typeof EXTRACTION_STATUSES)[number];
 export interface ExtractionResult {
   status: ExtractionStatus;
   fields: ExtractedFields;
+  warnings: string[];
+}
+
+// What HR's browser gets back from the alta del IMSS: the salary proposal only.
+export interface ImssRegistrationResult {
+  status: ExtractionStatus;
+  fields: { dailySalary?: string };
   warnings: string[];
 }
 
@@ -85,6 +93,29 @@ const NSS_FALLBACK_REGEX =
   /(?:N[uú]mero\s+de\s+Seguro\s+Social|NSS)[:\s]*(\d{11})/iu;
 
 const CURP_CADENA_REGEX = /Curp[:\s]*([A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z\d]\d)/iu;
+
+const SALARIO_DIARIO_REGEX =
+  /Salario\s+Diario(?:\s+Integrado)?[\s:|$]*([\d,]+(?:\.\d{1,2})?)/iu;
+
+const SALARIO_BASE_COTIZACION_REGEX =
+  /Salario\s+Base\s+de\s+Cotizaci[oó]n[\s:|$]*([\d,]+(?:\.\d{1,2})?)/iu;
+
+const SBC_ABBR_REGEX = /\bSBC\b[\s:|$]*([\d,]+(?:\.\d{1,2})?)/iu;
+
+// A row of "Relación de movimientos operados": NSS, name and "$ 695.55".
+const IMSS_MOVEMENT_ROW_REGEX = /\b\d{11}\b[^\n$]*\$\s*([\d,]+(?:\.\d{1,2})?)/u;
+
+const CURRENCY_AMOUNT_REGEX = /\$\s*([\d,]+\.\d{2})/u;
+
+const SALARY_REGEXES = [
+  SALARIO_DIARIO_REGEX,
+  SALARIO_BASE_COTIZACION_REGEX,
+  SBC_ABBR_REGEX,
+  IMSS_MOVEMENT_ROW_REGEX,
+  CURRENCY_AMOUNT_REGEX,
+];
+
+const THOUSANDS_SEPARATOR_REGEX = /,/gu;
 
 const CFE_ISSUER_REGEX = /\bCFE\b|Comisi[oó]n\s+Federal\s+de\s+Electricidad/iu;
 
@@ -283,4 +314,24 @@ export function parseDocument(
   const { fields, warnings } = PARSERS[kind](markdown);
 
   return { fields: keepValidFields(fields), warnings };
+}
+
+// The first pattern that finds an amount wins, from the most specific label to any "$" amount.
+export function parseImssRegistration(markdown: string) {
+  const [raw] = SALARY_REGEXES.flatMap(
+    (regex) => markdown.match(regex)?.[1] ?? []
+  );
+
+  if (!raw) {
+    return {};
+  }
+
+  const dailySalary = Number(
+    raw.replace(THOUSANDS_SEPARATOR_REGEX, "")
+  ).toFixed(2);
+
+  // The form's own rule decides, so a salary HR could not save is not prefilled.
+  return dailySalarySchema.safeParse(dailySalary).success
+    ? { dailySalary }
+    : {};
 }

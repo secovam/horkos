@@ -14,7 +14,10 @@ import {
   warningMessage,
 } from "@/lib/employee-record";
 import type { ExtractionStatus } from "@/lib/extraction";
-import { DOCUMENT_KINDS, DOCUMENT_KIND_LIST } from "@/lib/submission";
+import {
+  STORED_DOCUMENT_KINDS,
+  STORED_DOCUMENT_KIND_LIST,
+} from "@/lib/submission";
 
 type Employee = NonNullable<Awaited<ReturnType<typeof getEmployee>>>;
 
@@ -50,7 +53,7 @@ export function EmployeeDocuments({
       </CardHeader>
       <CardContent>
         <ul className="divide-y">
-          {DOCUMENT_KIND_LIST.map((kind) => {
+          {STORED_DOCUMENT_KIND_LIST.map((kind) => {
             const file = documents.find((item) => item.kind === kind);
             const extraction = extractions.find((item) => item.kind === kind);
 
@@ -61,7 +64,7 @@ export function EmployeeDocuments({
               >
                 <div className="grid gap-1">
                   <h3 className="text-sidebar-primary text-sm font-medium">
-                    {DOCUMENT_KINDS[kind].label}
+                    {STORED_DOCUMENT_KINDS[kind].label}
                   </h3>
                   {file ? (
                     <p className="text-muted-foreground text-sm">

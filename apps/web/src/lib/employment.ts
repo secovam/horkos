@@ -80,6 +80,41 @@ function isIsoDate(value: string) {
   );
 }
 
+// Gaia's floor for a daily salary.
+export const MIN_DAILY_SALARY_CENTS = 31_500;
+
+const salaryFormat = new Intl.NumberFormat("es-MX", {
+  style: "currency",
+  currency: "MXN",
+});
+
+export function formatSalary(amount: string | number) {
+  return salaryFormat.format(Number(amount));
+}
+
+// "695.55" in the form, whole cents everywhere else, so money never goes through a float.
+export const dailySalarySchema = z
+  .string()
+  .trim()
+  .min(1, "Escribe el salario diario.")
+  .pipe(
+    z
+      .string()
+      .regex(
+        /^\d{1,7}(?:\.\d{1,2})?$/u,
+        "Escribe un monto válido, con hasta dos decimales."
+      )
+  )
+  .transform((amount) => Math.round(Number(amount) * 100))
+  .pipe(
+    z
+      .number()
+      .min(
+        MIN_DAILY_SALARY_CENTS,
+        `El salario diario debe ser al menos ${formatSalary(MIN_DAILY_SALARY_CENTS / 100)}.`
+      )
+  );
+
 export const employmentSchema = z.object({
   workEmail: z
     .string()
@@ -114,6 +149,8 @@ export const employmentSchema = z.object({
   nationality: required("Escribe la nacionalidad."),
   sex: choice(SEX_LIST, "Elige el sexo."),
   hireDate: z.string().refine(isIsoDate, "Elige una fecha de ingreso válida."),
+  // Parses to cents, so the output value is not the input string.
+  dailySalary: dailySalarySchema,
 });
 
 export type EmploymentInput = z.input<typeof employmentSchema>;
@@ -131,6 +168,7 @@ export const EMPLOYMENT_FIELDS = {
   nationality: { label: "Nacionalidad" },
   sex: { label: "Sexo" },
   hireDate: { label: "Fecha de ingreso" },
+  dailySalary: { label: "Salario diario" },
 } satisfies Record<keyof EmploymentFields, { label: string }>;
 
 export interface StoredEmployment {
@@ -144,6 +182,7 @@ export interface StoredEmployment {
   nationality: string;
   sex: string;
   hireDate: string;
+  dailySalaryCents: number;
 }
 
 // CURP position 11 is the sex: H (hombre) or M (mujer).
@@ -159,7 +198,11 @@ function sexFromCurp(curp: string) {
 
 export function employmentDefaults(
   saved: StoredEmployment | null,
-  { invitationEmail, curp }: { invitationEmail: string; curp: string }
+  {
+    invitationEmail,
+    curp,
+    proposedSalary,
+  }: { invitationEmail: string; curp: string; proposedSalary?: string }
 ): EmploymentInput {
   if (saved) {
     return {
@@ -173,6 +216,7 @@ export function employmentDefaults(
       nationality: saved.nationality,
       sex: saved.sex,
       hireDate: saved.hireDate,
+      dailySalary: (saved.dailySalaryCents / 100).toFixed(2),
     };
   }
 
@@ -187,5 +231,6 @@ export function employmentDefaults(
     nationality: DEFAULT_NATIONALITY,
     sex: sexFromCurp(curp),
     hireDate: "",
+    dailySalary: proposedSalary ?? "",
   };
 }

@@ -13,6 +13,7 @@ const valid = {
   nationality: "Mexicana",
   sex: "female",
   hireDate: "2026-02-28",
+  dailySalary: "695.55",
 };
 
 describe("employmentSchema", () => {
@@ -44,10 +45,27 @@ describe("employmentSchema", () => {
     ["hireDate", "2026-02-30"],
     ["hireDate", "2026-13-01"],
     ["hireDate", "28/02/2026"],
+    ["dailySalary", ""],
+    ["dailySalary", "314.99"],
+    ["dailySalary", "0"],
+    ["dailySalary", "-400"],
+    ["dailySalary", "695.555"],
+    ["dailySalary", "1,200.50"],
+    ["dailySalary", "abc"],
   ])("rejects %s = %j", (field, value) => {
     expect(
       employmentSchema.safeParse({ ...valid, [field]: value }).success
     ).toBe(false);
+  });
+
+  test.each([
+    ["695.55", 69_555],
+    [" 315 ", 31_500],
+    ["1200.5", 120_050],
+  ])("turns the salary %j into %d cents", (dailySalary, cents) => {
+    expect(employmentSchema.parse({ ...valid, dailySalary }).dailySalary).toBe(
+      cents
+    );
   });
 
   test("accepts a leap day", () => {
@@ -75,7 +93,15 @@ describe("employmentDefaults", () => {
       nationality: "Mexicana",
       sex: "male",
       hireDate: "",
+      dailySalary: "",
     });
+  });
+
+  test("prefills the salary the alta del IMSS proposed", () => {
+    expect(
+      employmentDefaults(null, { ...context, proposedSalary: "695.55" })
+        .dailySalary
+    ).toBe("695.55");
   });
 
   test.each([
@@ -89,13 +115,17 @@ describe("employmentDefaults", () => {
   test("prefers saved values and shows a missing manager as empty", () => {
     const saved = {
       ...employmentSchema.parse(valid),
+      dailySalaryCents: 120_050,
       manager: null,
       personalEmail: "otro@example.com",
       nationality: "Colombiana",
       sex: "female",
     };
 
-    expect(employmentDefaults(saved, context)).toMatchObject({
+    expect(
+      employmentDefaults(saved, { ...context, proposedSalary: "999.00" })
+    ).toMatchObject({
+      dailySalary: "1200.50",
       personalEmail: "otro@example.com",
       nationality: "Colombiana",
       sex: "female",

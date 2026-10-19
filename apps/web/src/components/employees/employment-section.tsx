@@ -10,6 +10,7 @@ import {
   SEXES,
   SEX_LIST,
   employmentSchema,
+  formatSalary,
 } from "@/lib/employment";
 import type { EmploymentInput } from "@/lib/employment";
 
@@ -38,6 +39,10 @@ function displayEmployment(
 
   if (name === "hireDate") {
     return hireDateFormat.format(new Date(`${value}T00:00:00Z`));
+  }
+
+  if (name === "dailySalary") {
+    return formatSalary(value);
   }
 
   return value || "—";

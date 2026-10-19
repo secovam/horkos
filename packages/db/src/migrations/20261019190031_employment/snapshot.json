@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "b895f409-05f5-41f1-98ed-fce0e8380946",
+  "id": "acac1354-db9c-42b9-b6a6-d08a455e3e2f",
   "prevIds": [
     "4d1adfda-d8ba-45d6-a40f-938f75805f70"
   ],
@@ -929,6 +929,16 @@
       "default": null,
       "generated": null,
       "name": "hire_date",
+      "entityType": "columns",
+      "table": "employment"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "daily_salary_cents",
       "entityType": "columns",
       "table": "employment"
     },

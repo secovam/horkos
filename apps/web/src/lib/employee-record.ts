@@ -8,10 +8,12 @@ import {
   MARITAL_STATUS_LIST,
   RELATIONSHIPS,
   RELATIONSHIP_LIST,
+  isEmployeeDocumentKind,
   submissionSchema,
 } from "./submission";
 import type {
   DocumentKind,
+  StoredDocumentKind,
   SubmissionFields,
   SubmissionInput,
 } from "./submission";
@@ -23,6 +25,17 @@ export interface StoredExtraction {
   status: ExtractionStatus;
   fields: Record<string, string>;
   warnings: string[];
+}
+
+// The review compares the employee's documents with what they typed; HR's own documents are not part of it.
+export function employeeExtractions(
+  rows: readonly (Omit<StoredExtraction, "kind"> & {
+    kind: StoredDocumentKind;
+  })[]
+) {
+  return rows.flatMap(({ kind, ...rest }) =>
+    isEmployeeDocumentKind(kind) ? [{ kind, ...rest }] : []
+  );
 }
 
 export type FieldStatus = "matches" | "differs" | "not_extracted";

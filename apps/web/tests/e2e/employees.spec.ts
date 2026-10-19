@@ -2,7 +2,10 @@ import type { Page } from "@playwright/test";
 
 import { clickUntil, invite, login, toastMessage } from "./actions";
 import { expect, test } from "./fixtures";
-import { openForm, submitWithAllDocuments } from "./submission-flow";
+import { openForm, pdfFile, submitWithAllDocuments } from "./submission-flow";
+
+const IMSS_REGISTRATION_TEXT = `Relación de movimientos operados
+12345678901 FICTICIA PRUEBA MARIA ALTA $ 695.55`;
 
 test("HR reviews a submitted employee and opens their document", async ({
   app,
@@ -213,6 +216,43 @@ test("HR corrects the data, confirms the record and reopens it", async ({
   await page.getByRole("combobox", { name: "Sexo" }).click();
   await page.getByRole("option", { name: "Femenino" }).click();
   await page.getByLabel("Fecha de ingreso").fill("2026-03-02");
+
+  await page.getByRole("button", { name: "Guardar" }).click();
+  await expect(page.getByText("Escribe el salario diario.")).toBeVisible();
+
+  await page.getByLabel("Salario diario").fill("200");
+  await page.getByRole("button", { name: "Guardar" }).click();
+  await expect(
+    page.getByText("El salario diario debe ser al menos $315.00.")
+  ).toBeVisible();
+
+  await page.getByLabel("Salario diario").fill("700");
+  await page.getByRole("button", { name: "Guardar" }).click();
+  await expect(
+    toastMessage(
+      page,
+      "Sube el alta del IMSS antes de guardar los datos laborales."
+    )
+  ).toBeVisible();
+
+  await page.getByLabel("Salario diario").fill("");
+  await page
+    .getByLabel("Alta del IMSS")
+    .setInputFiles(pdfFile("alta.pdf", IMSS_REGISTRATION_TEXT));
+  await expect(page.getByText("Leído: $695.55")).toBeVisible();
+  await expect(page.getByLabel("Salario diario")).toHaveValue("695.55");
+
+  await page.getByLabel("Salario diario").fill("700");
+  await page
+    .getByLabel("Alta del IMSS")
+    .setInputFiles(pdfFile("alta-2.pdf", IMSS_REGISTRATION_TEXT));
+  await expect(page.getByText("Ya subiste alta-2.pdf")).toBeVisible();
+  await expect(page.getByLabel("Salario diario")).toHaveValue("700");
+  await expect(
+    page.getByText("El alta del IMSS indica $695.55.")
+  ).toBeVisible();
+
+  await page.getByLabel("Salario diario").fill("695.55");
   await page.getByRole("button", { name: "Guardar" }).click();
   await expect(toastMessage(page, "Datos laborales guardados")).toBeVisible();
 
@@ -225,10 +265,13 @@ test("HR corrects the data, confirms the record and reopens it", async ({
   await expect(fieldRow(page, "Fecha de ingreso")).toContainText(
     "2 de marzo de 2026"
   );
+  await expect(fieldRow(page, "Salario diario")).toContainText("$695.55");
+  await expect(page.getByText("alta-2.pdf")).toBeVisible();
   await clickUntil(
     page.getByRole("button", { name: "Editar datos laborales" }),
     page.getByLabel("Puesto")
   );
+  await expect(page.getByLabel("Salario diario")).toHaveValue("695.55");
   await page.getByLabel("Puesto").fill("Coordinadora de calidad");
   await page.getByRole("button", { name: "Guardar" }).click();
   await expect(toastMessage(page, "Datos laborales guardados")).toBeVisible();

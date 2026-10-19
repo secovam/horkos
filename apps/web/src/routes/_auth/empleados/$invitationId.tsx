@@ -80,6 +80,7 @@ function EmployeePage() {
     values,
     employmentValues,
     employmentComplete,
+    imssRegistration,
     review,
     documents,
     extractions,
@@ -161,6 +162,7 @@ function EmployeePage() {
         <EmploymentForm
           invitationId={invitationId}
           values={employmentValues}
+          imssRegistration={imssRegistration}
           onDone={() => setEditing("none")}
         />
       ) : (
