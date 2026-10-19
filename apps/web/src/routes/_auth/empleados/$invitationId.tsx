@@ -1,5 +1,6 @@
 import { Badge } from "@horkos/ui/components/badge";
 import { Button, buttonVariants } from "@horkos/ui/components/button";
+import { Dialog, DialogContent } from "@horkos/ui/components/dialog";
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
 import { UserSearchIcon, UsersIcon } from "lucide-react";
 import { useState } from "react";
@@ -158,19 +159,28 @@ function EmployeePage() {
         ))
       )}
 
-      {editing === "employment" && !confirmed ? (
-        <EmploymentForm
-          invitationId={invitationId}
-          values={employmentValues}
-          imssRegistration={imssRegistration}
-          onDone={() => setEditing("none")}
-        />
-      ) : (
-        <EmploymentSection
-          values={employmentValues}
-          complete={employmentComplete}
-        />
-      )}
+      <EmploymentSection
+        values={employmentValues}
+        complete={employmentComplete}
+      />
+
+      <Dialog
+        open={editing === "employment" && !confirmed}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditing("none");
+          }
+        }}
+      >
+        <DialogContent size="lg">
+          <EmploymentForm
+            invitationId={invitationId}
+            values={employmentValues}
+            imssRegistration={imssRegistration}
+            onDone={() => setEditing("none")}
+          />
+        </DialogContent>
+      </Dialog>
 
       <EmployeeDocuments
         invitationId={invitationId}

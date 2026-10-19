@@ -1,12 +1,13 @@
+import { Alert, AlertDescription } from "@horkos/ui/components/alert";
 import { Badge } from "@horkos/ui/components/badge";
 import { Button } from "@horkos/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@horkos/ui/components/card";
 import { Checkbox } from "@horkos/ui/components/checkbox";
+import {
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@horkos/ui/components/dialog";
 import {
   Field,
   FieldDescription,
@@ -396,7 +397,6 @@ export function EmploymentForm({
       ]);
       onDone();
     },
-    onError: (error) => toast.error(error.message),
   });
 
   const [upload, setUpload] = useState(() =>
@@ -406,12 +406,14 @@ export function EmploymentForm({
   // Newest pick wins, so a slow earlier answer cannot overwrite a later one.
   const latestUpload = useRef(0);
 
+  const formRef = useRef<HTMLFormElement>(null);
+
   const form = useForm({
     defaultValues: values,
     validators: { onSubmit: employmentSchema },
     onSubmitInvalid: () => {
-      document
-        .querySelector<HTMLElement>('main [aria-invalid="true"]')
+      formRef.current
+        ?.querySelector<HTMLElement>('[aria-invalid="true"]')
         ?.focus();
     },
     onSubmit: ({ value }) => save.mutate(value),
@@ -436,6 +438,7 @@ export function EmploymentForm({
       }
 
       setUpload({ status: "uploaded", ...uploaded });
+      save.reset();
 
       const proposal = uploaded.extraction.fields.dailySalary;
       const typed = form.getFieldValue("dailySalary").trim();
@@ -457,7 +460,8 @@ export function EmploymentForm({
 
   return (
     <form
-      className="flex flex-col gap-6"
+      ref={formRef}
+      className="grid gap-4"
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
@@ -465,69 +469,70 @@ export function EmploymentForm({
         form.handleSubmit();
       }}
     >
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h2 className="text-primary">Datos laborales</h2>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <FieldGroup>
-            <form.Field name="workEmail">
-              {(field) => <WorkEmailField field={field} />}
-            </form.Field>
-            <form.Field name="personalEmail">
-              {(field) => (
-                <TextField name="personalEmail" field={field} type="email" />
-              )}
-            </form.Field>
-            <form.Field name="jobTitle">
-              {(field) => <TextField name="jobTitle" field={field} />}
-            </form.Field>
-            <form.Field name="department">
-              {(field) => (
-                <SelectField
-                  name="department"
-                  field={field}
-                  items={DEPARTMENT_ITEMS}
-                />
-              )}
-            </form.Field>
-            <form.Field name="manager">
-              {(field) => <TextField name="manager" field={field} />}
-            </form.Field>
-            <form.Field name="office">
-              {(field) => (
-                <SelectField name="office" field={field} items={OFFICE_ITEMS} />
-              )}
-            </form.Field>
-            <form.Field name="companies">
-              {(field) => <CompaniesField field={field} />}
-            </form.Field>
-            <form.Field name="nationality">
-              {(field) => <TextField name="nationality" field={field} />}
-            </form.Field>
-            <form.Field name="sex">
-              {(field) => (
-                <SelectField name="sex" field={field} items={SEX_ITEMS} />
-              )}
-            </form.Field>
-            <form.Field name="hireDate">
-              {(field) => (
-                <TextField name="hireDate" field={field} type="date" />
-              )}
-            </form.Field>
-            <ImssRegistrationField upload={upload} onPick={pick} />
-            <form.Field name="dailySalary">
-              {(field) => (
-                <SalaryField field={field} proposal={proposalOf(upload)} />
-              )}
-            </form.Field>
-          </FieldGroup>
-        </CardContent>
-      </Card>
+      <DialogHeader>
+        <DialogTitle>Datos laborales</DialogTitle>
+        <DialogDescription>
+          Completa lo que el empleado no puede proporcionar.
+        </DialogDescription>
+      </DialogHeader>
+      <FieldGroup>
+        <form.Field name="workEmail">
+          {(field) => <WorkEmailField field={field} />}
+        </form.Field>
+        <form.Field name="personalEmail">
+          {(field) => (
+            <TextField name="personalEmail" field={field} type="email" />
+          )}
+        </form.Field>
+        <form.Field name="jobTitle">
+          {(field) => <TextField name="jobTitle" field={field} />}
+        </form.Field>
+        <form.Field name="department">
+          {(field) => (
+            <SelectField
+              name="department"
+              field={field}
+              items={DEPARTMENT_ITEMS}
+            />
+          )}
+        </form.Field>
+        <form.Field name="manager">
+          {(field) => <TextField name="manager" field={field} />}
+        </form.Field>
+        <form.Field name="office">
+          {(field) => (
+            <SelectField name="office" field={field} items={OFFICE_ITEMS} />
+          )}
+        </form.Field>
+        <form.Field name="companies">
+          {(field) => <CompaniesField field={field} />}
+        </form.Field>
+        <form.Field name="nationality">
+          {(field) => <TextField name="nationality" field={field} />}
+        </form.Field>
+        <form.Field name="sex">
+          {(field) => (
+            <SelectField name="sex" field={field} items={SEX_ITEMS} />
+          )}
+        </form.Field>
+        <form.Field name="hireDate">
+          {(field) => <TextField name="hireDate" field={field} type="date" />}
+        </form.Field>
+        <ImssRegistrationField upload={upload} onPick={pick} />
+        <form.Field name="dailySalary">
+          {(field) => (
+            <SalaryField field={field} proposal={proposalOf(upload)} />
+          )}
+        </form.Field>
+      </FieldGroup>
 
-      <div className="flex justify-end gap-3">
+      {save.error ? (
+        <Alert variant="destructive" role="alert">
+          <AlertDescription>{save.error.message}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      <DialogFooter>
         <Button
           type="button"
           variant="outline"
@@ -539,7 +544,7 @@ export function EmploymentForm({
         <Button type="submit" disabled={save.isPending}>
           {save.isPending ? "Guardando…" : "Guardar"}
         </Button>
-      </div>
+      </DialogFooter>
     </form>
   );
 }

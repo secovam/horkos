@@ -229,10 +229,9 @@ test("HR corrects the data, confirms the record and reopens it", async ({
   await page.getByLabel("Salario diario").fill("700");
   await page.getByRole("button", { name: "Guardar" }).click();
   await expect(
-    toastMessage(
-      page,
-      "Sube el alta del IMSS antes de guardar los datos laborales."
-    )
+    page
+      .getByRole("dialog")
+      .getByText("Sube el alta del IMSS antes de guardar los datos laborales.")
   ).toBeVisible();
 
   await page.getByLabel("Salario diario").fill("");
