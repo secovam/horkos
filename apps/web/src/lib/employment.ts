@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import type { ImssProposals } from "./extraction";
+
 export const OFFICE_LIST = [
   "Acapulco",
   "Cancún",
@@ -65,7 +67,7 @@ function required(message: string) {
   return z.string().trim().min(1, message).max(200, "Es demasiado largo.");
 }
 
-function isIsoDate(value: string) {
+export function isHireDate(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/u.test(value)) {
     return false;
   }
@@ -115,18 +117,30 @@ export const dailySalarySchema = z
       )
   );
 
+const hireDateFormat = new Intl.DateTimeFormat("es-MX", {
+  dateStyle: "long",
+  timeZone: "UTC",
+});
+
+export function formatHireDate(isoDate: string) {
+  return hireDateFormat.format(new Date(`${isoDate}T00:00:00Z`));
+}
+
 export const employmentSchema = z.object({
   workEmail: z
     .string()
     .trim()
     .toLowerCase()
     .pipe(
-      z
-        .email("Escribe un correo de trabajo válido.")
-        .refine(
-          (value) => value.endsWith(WORK_EMAIL_DOMAIN),
-          `El correo de trabajo termina en ${WORK_EMAIL_DOMAIN}.`
-        )
+      z.union([
+        z.literal(""),
+        z
+          .email("Escribe un correo de trabajo válido.")
+          .refine(
+            (value) => value.endsWith(WORK_EMAIL_DOMAIN),
+            `El correo de trabajo termina en ${WORK_EMAIL_DOMAIN}.`
+          ),
+      ])
     ),
   personalEmail: z
     .string()
@@ -137,18 +151,10 @@ export const employmentSchema = z.object({
   department: choice(DEPARTMENT_LIST, "Elige el departamento."),
   manager: z.string().trim().max(200, "Es demasiado largo."),
   office: choice(OFFICE_LIST, "Elige la oficina."),
-  companies: z.array(z.string(), { error: "Elige al menos una empresa." }).pipe(
-    z
-      .array(z.enum(COMPANY_LIST, { error: "Elige una empresa válida." }))
-      .min(1, "Elige al menos una empresa.")
-      .refine(
-        (values) => new Set(values).size === values.length,
-        "Una empresa no puede repetirse."
-      )
-  ),
+  company: choice(COMPANY_LIST, "Elige la empresa."),
   nationality: required("Escribe la nacionalidad."),
   sex: choice(SEX_LIST, "Elige el sexo."),
-  hireDate: z.string().refine(isIsoDate, "Elige una fecha de ingreso válida."),
+  hireDate: z.string().refine(isHireDate, "Elige una fecha de ingreso válida."),
   // Parses to cents, so the output value is not the input string.
   dailySalary: dailySalarySchema,
 });
@@ -158,13 +164,13 @@ export type EmploymentInput = z.input<typeof employmentSchema>;
 export type EmploymentFields = z.output<typeof employmentSchema>;
 
 export const EMPLOYMENT_FIELDS = {
-  workEmail: { label: "Correo de trabajo" },
+  workEmail: { label: "Correo de trabajo (opcional)" },
   personalEmail: { label: "Correo personal" },
   jobTitle: { label: "Puesto" },
   department: { label: "Departamento" },
   manager: { label: "Jefe inmediato (opcional)" },
   office: { label: "Oficina" },
-  companies: { label: "Empresas" },
+  company: { label: "Empresa" },
   nationality: { label: "Nacionalidad" },
   sex: { label: "Sexo" },
   hireDate: { label: "Fecha de ingreso" },
@@ -172,13 +178,13 @@ export const EMPLOYMENT_FIELDS = {
 } satisfies Record<keyof EmploymentFields, { label: string }>;
 
 export interface StoredEmployment {
-  workEmail: string;
+  workEmail: string | null;
   personalEmail: string;
   jobTitle: string;
   department: string;
   manager: string | null;
   office: string;
-  companies: string[];
+  company: string;
   nationality: string;
   sex: string;
   hireDate: string;
@@ -201,18 +207,18 @@ export function employmentDefaults(
   {
     invitationEmail,
     curp,
-    proposedSalary,
-  }: { invitationEmail: string; curp: string; proposedSalary?: string }
+    proposals,
+  }: { invitationEmail: string; curp: string; proposals?: ImssProposals }
 ): EmploymentInput {
   if (saved) {
     return {
-      workEmail: saved.workEmail,
+      workEmail: saved.workEmail ?? "",
       personalEmail: saved.personalEmail,
       jobTitle: saved.jobTitle,
       department: saved.department,
       manager: saved.manager ?? "",
       office: saved.office,
-      companies: saved.companies,
+      company: saved.company,
       nationality: saved.nationality,
       sex: saved.sex,
       hireDate: saved.hireDate,
@@ -227,10 +233,10 @@ export function employmentDefaults(
     department: "",
     manager: "",
     office: "",
-    companies: [],
+    company: "",
     nationality: DEFAULT_NATIONALITY,
     sex: sexFromCurp(curp),
-    hireDate: "",
-    dailySalary: proposedSalary ?? "",
+    hireDate: proposals?.hireDate ?? "",
+    dailySalary: proposals?.dailySalary ?? "",
   };
 }

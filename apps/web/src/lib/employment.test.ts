@@ -9,7 +9,7 @@ const valid = {
   department: "Calidad",
   manager: "",
   office: "CDMX",
-  companies: ["SERALAM", "SECOVAM"],
+  company: "SECOVAM",
   nationality: "Mexicana",
   sex: "female",
   hireDate: "2026-02-28",
@@ -29,15 +29,15 @@ describe("employmentSchema", () => {
     ["workEmail", "ana@example.com"],
     ["workEmail", "@secovam.com"],
     ["workEmail", "a b@secovam.com"],
-    ["workEmail", ""],
+    ["workEmail", "ana@secovam.com.mx"],
     ["personalEmail", "ana"],
     ["jobTitle", "  "],
     ["department", ""],
     ["department", "Cocina"],
     ["office", "Marte"],
-    ["companies", []],
-    ["companies", ["OTRA"]],
-    ["companies", ["SERALAM", "SERALAM"]],
+    ["company", ""],
+    ["company", "OTRA"],
+    ["company", ["SERALAM"]],
     ["nationality", ""],
     ["sex", ""],
     ["sex", "other"],
@@ -68,6 +68,12 @@ describe("employmentSchema", () => {
     );
   });
 
+  test("accepts an empty work email", () => {
+    expect(
+      employmentSchema.parse({ ...valid, workEmail: "  " }).workEmail
+    ).toBe("");
+  });
+
   test("accepts a leap day", () => {
     expect(
       employmentSchema.safeParse({ ...valid, hireDate: "2028-02-29" }).success
@@ -89,7 +95,7 @@ describe("employmentDefaults", () => {
       department: "",
       manager: "",
       office: "",
-      companies: [],
+      company: "",
       nationality: "Mexicana",
       sex: "male",
       hireDate: "",
@@ -97,11 +103,13 @@ describe("employmentDefaults", () => {
     });
   });
 
-  test("prefills the salary the alta del IMSS proposed", () => {
+  test("prefills what the alta del IMSS proposed", () => {
     expect(
-      employmentDefaults(null, { ...context, proposedSalary: "695.55" })
-        .dailySalary
-    ).toBe("695.55");
+      employmentDefaults(null, {
+        ...context,
+        proposals: { dailySalary: "695.55", hireDate: "2026-03-02" },
+      })
+    ).toMatchObject({ dailySalary: "695.55", hireDate: "2026-03-02" });
   });
 
   test.each([
@@ -117,20 +125,26 @@ describe("employmentDefaults", () => {
       ...employmentSchema.parse(valid),
       dailySalaryCents: 120_050,
       manager: null,
+      workEmail: null,
       personalEmail: "otro@example.com",
       nationality: "Colombiana",
       sex: "female",
     };
 
     expect(
-      employmentDefaults(saved, { ...context, proposedSalary: "999.00" })
+      employmentDefaults(saved, {
+        ...context,
+        proposals: { dailySalary: "999.00", hireDate: "2020-01-01" },
+      })
     ).toMatchObject({
       dailySalary: "1200.50",
       personalEmail: "otro@example.com",
       nationality: "Colombiana",
       sex: "female",
       manager: "",
-      companies: ["SERALAM", "SECOVAM"],
+      workEmail: "",
+      company: "SECOVAM",
+      hireDate: "2026-02-28",
     });
   });
 });

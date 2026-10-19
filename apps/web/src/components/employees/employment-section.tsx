@@ -10,14 +10,10 @@ import {
   SEXES,
   SEX_LIST,
   employmentSchema,
+  formatHireDate,
   formatSalary,
 } from "@/lib/employment";
 import type { EmploymentInput } from "@/lib/employment";
-
-const hireDateFormat = new Intl.DateTimeFormat("es-MX", {
-  dateStyle: "long",
-  timeZone: "UTC",
-});
 
 function isSex(value: string): value is (typeof SEX_LIST)[number] {
   return SEX_LIST.some((sex) => sex === value);
@@ -29,16 +25,12 @@ function displayEmployment(
 ) {
   const value = values[name];
 
-  if (Array.isArray(value)) {
-    return value.join(", ");
-  }
-
   if (name === "sex" && isSex(value)) {
     return SEXES[value].label;
   }
 
   if (name === "hireDate") {
-    return hireDateFormat.format(new Date(`${value}T00:00:00Z`));
+    return formatHireDate(value);
   }
 
   if (name === "dailySalary") {

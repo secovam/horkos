@@ -157,20 +157,25 @@ export const getEmployee = createServerFn({ method: "POST" })
       ({ kind }) => kind === "imss_registration"
     );
 
+    const imssProposals = {
+      dailySalary: imssExtraction?.fields.dailySalary,
+      hireDate: imssExtraction?.fields.hireDate,
+    };
+
     return {
       employee,
       values: toFormValues(submitted),
       employmentValues: employmentDefaults(savedEmployment ?? null, {
         invitationEmail: employee.email,
         curp: submitted.curp,
-        proposedSalary: imssExtraction?.fields.dailySalary,
+        proposals: imssProposals,
       }),
       imssRegistration: imssFile
         ? {
             fileName: imssFile.fileName,
             uploadedAt: imssFile.uploadedAt,
             status: imssExtraction?.status ?? "failed",
-            proposedSalary: imssExtraction?.fields.dailySalary,
+            proposals: imssProposals,
           }
         : null,
       employmentComplete: savedEmployment !== undefined,
@@ -321,6 +326,7 @@ export const saveEmployment = createServerFn({ method: "POST" })
     const stored = {
       ...rest,
       dailySalaryCents,
+      workEmail: fields.workEmail || null,
       manager: fields.manager || null,
     };
 
@@ -334,7 +340,7 @@ export const saveEmployment = createServerFn({ method: "POST" })
         db
           .select({
             invitationId: invitation.id,
-            workEmail: sql<string>`${stored.workEmail}`.as("work_email"),
+            workEmail: sql<string | null>`${stored.workEmail}`.as("work_email"),
             personalEmail: sql<string>`${stored.personalEmail}`.as(
               "personal_email"
             ),
@@ -342,9 +348,7 @@ export const saveEmployment = createServerFn({ method: "POST" })
             department: sql<string>`${stored.department}`.as("department"),
             manager: sql<string | null>`${stored.manager}`.as("manager"),
             office: sql<string>`${stored.office}`.as("office"),
-            companies: sql<string>`${JSON.stringify(stored.companies)}`.as(
-              "companies"
-            ),
+            company: sql<string>`${stored.company}`.as("company"),
             nationality: sql<string>`${stored.nationality}`.as("nationality"),
             sex: sql<string>`${stored.sex}`.as("sex"),
             hireDate: sql<string>`${stored.hireDate}`.as("hire_date"),

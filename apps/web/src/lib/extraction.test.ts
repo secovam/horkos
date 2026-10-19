@@ -180,3 +180,55 @@ NSS Nombre Tipo Sal. Base
     expect(parseImssRegistration("Salario Diario: $ 200.00")).toEqual({});
   });
 });
+
+describe("parseImssRegistration hire date", () => {
+  const row = "12345678901 FICTICIA PRUEBA MARIA ALTA $ 695.55";
+
+  test.each([
+    ["Fecha de movimiento: 02/03/2026", "2026-03-02"],
+    ["Fecha mov. | 2-3-2026 |", "2026-03-02"],
+    ["FECHA DE ALTA 15/01/2026", "2026-01-15"],
+    ["Fecha de reingreso: 31-12-2025", "2025-12-31"],
+    ["Fecha de inicio: 01/02/2026", "2026-02-01"],
+  ])("reads the labeled date %j", (text, hireDate) => {
+    expect(parseImssRegistration(text)).toEqual({ hireDate });
+  });
+
+  it("prefers the labeled date over the row's date", () => {
+    const text = `Fecha de movimiento: 02/03/2026\n${row} 05/03/2026`;
+
+    expect(parseImssRegistration(text)).toMatchObject({
+      hireDate: "2026-03-02",
+    });
+  });
+
+  it("falls back to the first date on the insured's row", () => {
+    const text = `Fecha de proceso 20/03/2026\nNSS Nombre Tipo Fecha\n12345678901 FICTICIA PRUEBA ALTA 02/03/2026 $ 695.55`;
+
+    expect(parseImssRegistration(text)).toEqual({
+      dailySalary: "695.55",
+      hireDate: "2026-03-02",
+    });
+  });
+
+  it("ignores an unlabeled date outside the insured's row", () => {
+    const text = `Acuse de movimientos afiliatorios\n20/03/2026\n${row}`;
+
+    expect(parseImssRegistration(text)).toEqual({ dailySalary: "695.55" });
+  });
+
+  it("proposes no date when the only date is a header date", () => {
+    expect(
+      parseImssRegistration(
+        "Acuse de movimientos 20/03/2026\nSalario Diario: 695.55"
+      )
+    ).toEqual({ dailySalary: "695.55" });
+  });
+
+  it.each(["Fecha de movimiento: 31/02/2026", "Fecha de alta: 01/13/2026"])(
+    "drops the impossible date %j",
+    (text) => {
+      expect(parseImssRegistration(text)).toEqual({});
+    }
+  );
+});

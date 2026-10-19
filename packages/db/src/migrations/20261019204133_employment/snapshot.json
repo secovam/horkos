@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "acac1354-db9c-42b9-b6a6-d08a455e3e2f",
+  "id": "b2d8a87a-08e1-4e34-928d-03cee2314107",
   "prevIds": [
     "4d1adfda-d8ba-45d6-a40f-938f75805f70"
   ],
@@ -834,7 +834,7 @@
     },
     {
       "type": "text",
-      "notNull": true,
+      "notNull": false,
       "autoincrement": false,
       "default": null,
       "generated": null,
@@ -898,7 +898,7 @@
       "autoincrement": false,
       "default": null,
       "generated": null,
-      "name": "companies",
+      "name": "company",
       "entityType": "columns",
       "table": "employment"
     },

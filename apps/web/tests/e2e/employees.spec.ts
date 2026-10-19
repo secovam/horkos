@@ -5,6 +5,8 @@ import { expect, test } from "./fixtures";
 import { openForm, pdfFile, submitWithAllDocuments } from "./submission-flow";
 
 const IMSS_REGISTRATION_TEXT = `Relación de movimientos operados
+Fecha de proceso 20/03/2026
+Fecha de movimiento: 02/03/2026
 12345678901 FICTICIA PRUEBA MARIA ALTA $ 695.55`;
 
 test("HR reviews a submitted employee and opens their document", async ({
@@ -200,22 +202,19 @@ test("HR corrects the data, confirms the record and reopens it", async ({
   await expect(page.getByLabel("Nacionalidad")).toHaveValue("Mexicana");
   await page.getByRole("button", { name: "Guardar" }).click();
   await expect(page.getByText("Escribe el puesto.")).toBeVisible();
-  await expect(page.getByText("Elige al menos una empresa.")).toBeVisible();
+  await expect(page.getByText("Elige la empresa.")).toBeVisible();
 
-  await page
-    .getByRole("textbox", { name: "Correo de trabajo" })
-    .fill("ana.prueba");
   await page.getByLabel("Puesto").fill("Analista de calidad");
   await page.getByLabel("Jefe inmediato (opcional)").fill("Luis Ficticio");
   await page.getByRole("combobox", { name: "Departamento" }).click();
   await page.getByRole("option", { name: "Calidad" }).click();
   await page.getByRole("combobox", { name: "Oficina" }).click();
   await page.getByRole("option", { name: "CDMX" }).click();
-  await page.getByRole("checkbox", { name: "SERALAM" }).click();
-  await page.getByRole("checkbox", { name: "SECOVAM" }).click();
+  await page.getByRole("combobox", { name: "Empresa" }).click();
+  await page.getByRole("option", { name: "SECOVAM" }).click();
   await page.getByRole("combobox", { name: "Sexo" }).click();
   await page.getByRole("option", { name: "Femenino" }).click();
-  await page.getByLabel("Fecha de ingreso").fill("2026-03-02");
+  await page.getByLabel("Fecha de ingreso").fill("2026-03-05");
 
   await page.getByRole("button", { name: "Guardar" }).click();
   await expect(page.getByText("Escribe el salario diario.")).toBeVisible();
@@ -235,13 +234,16 @@ test("HR corrects the data, confirms the record and reopens it", async ({
   ).toBeVisible();
 
   await page.getByLabel("Salario diario").fill("");
+  await page.getByLabel("Fecha de ingreso").fill("");
   await page
     .getByLabel("Alta del IMSS")
     .setInputFiles(pdfFile("alta.pdf", IMSS_REGISTRATION_TEXT));
   await expect(page.getByText("Leído: $695.55")).toBeVisible();
   await expect(page.getByLabel("Salario diario")).toHaveValue("695.55");
+  await expect(page.getByLabel("Fecha de ingreso")).toHaveValue("2026-03-02");
 
   await page.getByLabel("Salario diario").fill("700");
+  await page.getByLabel("Fecha de ingreso").fill("2026-03-05");
   await page
     .getByLabel("Alta del IMSS")
     .setInputFiles(pdfFile("alta-2.pdf", IMSS_REGISTRATION_TEXT));
@@ -250,16 +252,22 @@ test("HR corrects the data, confirms the record and reopens it", async ({
   await expect(
     page.getByText("El alta del IMSS indica $695.55.")
   ).toBeVisible();
+  await expect(page.getByLabel("Fecha de ingreso")).toHaveValue("2026-03-05");
+  await expect(
+    page.getByText("El alta del IMSS indica 2 de marzo de 2026.")
+  ).toBeVisible();
+
+  await page.getByLabel("Fecha de ingreso").fill("2026-03-02");
 
   await page.getByLabel("Salario diario").fill("695.55");
   await page.getByRole("button", { name: "Guardar" }).click();
   await expect(toastMessage(page, "Datos laborales guardados")).toBeVisible();
 
   await page.reload();
-  await expect(fieldRow(page, "Correo de trabajo")).toContainText(
-    "ana.prueba@secovam.com"
+  await expect(fieldRow(page, "Correo de trabajo (opcional)")).toContainText(
+    "—"
   );
-  await expect(fieldRow(page, "Empresas")).toContainText("SERALAM, SECOVAM");
+  await expect(fieldRow(page, "Empresa")).toContainText("SECOVAM");
   await expect(fieldRow(page, "Sexo")).toContainText("Femenino");
   await expect(fieldRow(page, "Fecha de ingreso")).toContainText(
     "2 de marzo de 2026"

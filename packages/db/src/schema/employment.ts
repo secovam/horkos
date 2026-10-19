@@ -30,6 +30,13 @@ export const DEPARTMENT_VALUES = [
   "Unidad de Inspección",
 ] as const;
 
+export const COMPANY_VALUES = [
+  "SERALAM",
+  "SECOVAM",
+  "LABAIND",
+  "SECOLAM",
+] as const;
+
 export const SEX_VALUES = ["male", "female"] as const;
 
 const now = sql`(cast(unixepoch('subsecond') * 1000 as integer))`;
@@ -39,13 +46,13 @@ export const employment = sqliteTable("employment", {
   invitationId: text("invitation_id")
     .primaryKey()
     .references(() => invitation.id, { onDelete: "cascade" }),
-  workEmail: text("work_email").notNull(),
+  workEmail: text("work_email"),
   personalEmail: text("personal_email").notNull(),
   jobTitle: text("job_title").notNull(),
   department: text("department", { enum: DEPARTMENT_VALUES }).notNull(),
   manager: text("manager"),
   office: text("office", { enum: OFFICE_VALUES }).notNull(),
-  companies: text("companies", { mode: "json" }).$type<string[]>().notNull(),
+  company: text("company", { enum: COMPANY_VALUES }).notNull(),
   nationality: text("nationality").notNull(),
   sex: text("sex", { enum: SEX_VALUES }).notNull(),
   hireDate: text("hire_date").notNull(),

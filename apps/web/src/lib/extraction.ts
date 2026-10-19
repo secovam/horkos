@@ -1,5 +1,5 @@
 /* oxlint-disable prefer-named-capture-group, sonarjs/super-linear-regex -- Patterns ported from the SAT, IMSS and utility-bill layouts; they run on at most five pages of text. */
-import { dailySalarySchema } from "./employment";
+import { dailySalarySchema, isHireDate } from "./employment";
 import { submissionSchema } from "./submission";
 import type { DocumentKind, SubmissionInput } from "./submission";
 
@@ -24,10 +24,13 @@ export interface ExtractionResult {
   warnings: string[];
 }
 
-// What HR's browser gets back from the alta del IMSS: the salary proposal only.
+// What the alta del IMSS can propose to HR's form, keyed like the form's fields.
+export type ImssProposals = Partial<Record<"dailySalary" | "hireDate", string>>;
+
+// What HR's browser gets back from the alta del IMSS: proposals only.
 export interface ImssRegistrationResult {
   status: ExtractionStatus;
-  fields: { dailySalary?: string };
+  fields: ImssProposals;
   warnings: string[];
 }
 
@@ -114,6 +117,20 @@ const SALARY_REGEXES = [
   IMSS_MOVEMENT_ROW_REGEX,
   CURRENCY_AMOUNT_REGEX,
 ];
+
+const DATE = String.raw`(\d{1,2})[/-](\d{1,2})[/-](\d{4})`;
+
+const MOVEMENT_DATE_LABEL = String.raw`Fecha\s+(?:de\s+)?(?:movimiento|mov\.?|alta|reingreso|inicio)`;
+
+// "Fecha de movimiento: 02/03/2026", also inside a table cell.
+const LABELED_DATE_REGEX = new RegExp(
+  `${MOVEMENT_DATE_LABEL}[\\s:|]*${DATE}`,
+  "iu"
+);
+
+const NSS_ROW_REGEX = /^.*\b\d{11}\b.*$/mu;
+
+const ROW_DATE_REGEX = new RegExp(`(?<!\\d)${DATE}(?!\\d)`, "u");
 
 const THOUSANDS_SEPARATOR_REGEX = /,/gu;
 
@@ -317,13 +334,13 @@ export function parseDocument(
 }
 
 // The first pattern that finds an amount wins, from the most specific label to any "$" amount.
-export function parseImssRegistration(markdown: string) {
+function proposeDailySalary(markdown: string) {
   const [raw] = SALARY_REGEXES.flatMap(
     (regex) => markdown.match(regex)?.[1] ?? []
   );
 
   if (!raw) {
-    return {};
+    return;
   }
 
   const dailySalary = Number(
@@ -332,6 +349,31 @@ export function parseImssRegistration(markdown: string) {
 
   // The form's own rule decides, so a salary HR could not save is not prefilled.
   return dailySalarySchema.safeParse(dailySalary).success
-    ? { dailySalary }
-    : {};
+    ? dailySalary
+    : undefined;
+}
+
+function toIsoDate([, day, month, year]: RegExpMatchArray) {
+  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+}
+
+// Only a labeled date or the one on the insured's own row: the acuse also prints a processing date that is not the hire date.
+function proposeHireDate(markdown: string) {
+  const match =
+    markdown.match(LABELED_DATE_REGEX) ??
+    markdown.match(NSS_ROW_REGEX)?.[0].match(ROW_DATE_REGEX);
+
+  const hireDate = match ? toIsoDate(match) : undefined;
+
+  return hireDate && isHireDate(hireDate) ? hireDate : undefined;
+}
+
+export function parseImssRegistration(markdown: string): ImssProposals {
+  const dailySalary = proposeDailySalary(markdown);
+  const hireDate = proposeHireDate(markdown);
+
+  return {
+    ...(dailySalary && { dailySalary }),
+    ...(hireDate && { hireDate }),
+  };
 }

@@ -1,7 +1,6 @@
 import { Alert, AlertDescription } from "@horkos/ui/components/alert";
 import { Badge } from "@horkos/ui/components/badge";
 import { Button } from "@horkos/ui/components/button";
-import { Checkbox } from "@horkos/ui/components/checkbox";
 import {
   DialogDescription,
   DialogFooter,
@@ -14,8 +13,6 @@ import {
   FieldError,
   FieldGroup,
   FieldLabel,
-  FieldLegend,
-  FieldSet,
 } from "@horkos/ui/components/field";
 import { Input } from "@horkos/ui/components/input";
 import {
@@ -41,6 +38,7 @@ import { useRef, useState } from "react";
 import { saveEmployment, uploadImssRegistration } from "@/functions/employees";
 import {
   COMPANY_LIST,
+  formatHireDate,
   DEPARTMENT_LIST,
   EMPLOYMENT_FIELDS,
   OFFICE_LIST,
@@ -51,7 +49,7 @@ import {
   formatSalary,
 } from "@/lib/employment";
 import type { EmploymentInput } from "@/lib/employment";
-import type { ImssRegistrationResult } from "@/lib/extraction";
+import type { ImssProposals, ImssRegistrationResult } from "@/lib/extraction";
 import {
   DOCUMENT_ACCEPT,
   HR_DOCUMENT_KINDS,
@@ -71,7 +69,7 @@ type ImssUpload =
 interface SavedImssRegistration {
   fileName: string;
   status: ImssRegistrationResult["status"];
-  proposedSalary?: string;
+  proposals: ImssProposals;
 }
 
 const UPLOAD_ERROR_FALLBACK =
@@ -87,15 +85,21 @@ function uploadFromServer(saved: SavedImssRegistration | null): ImssUpload {
     fileName: saved.fileName,
     extraction: {
       status: saved.status,
-      fields: { dailySalary: saved.proposedSalary },
+      fields: saved.proposals,
     },
   };
 }
 
-function proposalOf(upload: ImssUpload) {
-  return upload.status === "uploaded"
-    ? upload.extraction.fields.dailySalary
-    : undefined;
+// The fields the alta del IMSS can fill in, each with how to show its proposal.
+const PROPOSAL_FORMATS = {
+  dailySalary: formatSalary,
+  hireDate: formatHireDate,
+} satisfies Record<keyof ImssProposals, (value: string) => string>;
+
+const PROPOSAL_NAMES = ["dailySalary", "hireDate"] as const;
+
+function proposalsOf(upload: ImssUpload): ImssProposals {
+  return upload.status === "uploaded" ? upload.extraction.fields : {};
 }
 
 function describeUpload(upload: ImssUpload) {
@@ -105,10 +109,10 @@ function describeUpload(upload: ImssUpload) {
     }
 
     case "uploaded": {
-      const proposal = proposalOf(upload);
+      const { dailySalary } = proposalsOf(upload);
 
-      const read = proposal
-        ? `Leído: ${formatSalary(proposal)}`
+      const read = dailySalary
+        ? `Leído: ${formatSalary(dailySalary)}`
         : "No pudimos leer el salario, escríbelo a mano.";
 
       return `Ya subiste ${upload.fileName}. Elige otro para reemplazarlo. ${read}`;
@@ -135,7 +139,7 @@ function uploadBadge(upload: ImssUpload) {
     }
 
     default: {
-      return proposalOf(upload)
+      return proposalsOf(upload).dailySalary
         ? ({ variant: "default", label: "Leído" } as const)
         : ({ variant: "secondary", label: "Sin leer" } as const);
     }
@@ -180,15 +184,37 @@ function ImssRegistrationField({
   );
 }
 
+// Shown only while HR's value differs from what the alta del IMSS indicates.
+function ProposalHint({
+  name,
+  field,
+  proposals,
+}: {
+  name: keyof ImssProposals;
+  field: AnyFieldApi;
+  proposals: ImssProposals;
+}) {
+  const proposal = proposals[name];
+
+  if (proposal === undefined || proposal === field.state.value) {
+    return null;
+  }
+
+  return (
+    <FieldDescription>
+      El alta del IMSS indica {PROPOSAL_FORMATS[name](proposal)}.
+    </FieldDescription>
+  );
+}
+
 function SalaryField({
   field,
-  proposal,
+  proposals,
 }: {
   field: AnyFieldApi;
-  proposal?: string;
+  proposals: ImssProposals;
 }) {
   const { errors } = field.state.meta;
-  const differs = proposal !== undefined && proposal !== field.state.value;
 
   return (
     <Field data-invalid={errors.length > 0}>
@@ -210,11 +236,7 @@ function SalaryField({
           onChange={(event) => field.handleChange(event.target.value)}
         />
       </InputGroup>
-      {differs ? (
-        <FieldDescription>
-          El alta del IMSS indica {formatSalary(proposal)}.
-        </FieldDescription>
-      ) : null}
+      <ProposalHint name="dailySalary" field={field} proposals={proposals} />
       <FieldError errors={errors} />
     </Field>
   );
@@ -226,6 +248,8 @@ const DEPARTMENT_ITEMS = DEPARTMENT_LIST.map((value) => ({
 }));
 
 const OFFICE_ITEMS = OFFICE_LIST.map((value) => ({ value, label: value }));
+
+const COMPANY_ITEMS = COMPANY_LIST.map((value) => ({ value, label: value }));
 
 const SEX_ITEMS = SEX_LIST.map((value) => ({
   value,
@@ -276,10 +300,12 @@ function TextField({
   name,
   field,
   type = "text",
+  proposals,
 }: {
   name: keyof EmploymentInput;
   field: AnyFieldApi;
   type?: "text" | "email" | "date";
+  proposals?: ImssProposals;
 }) {
   const { errors } = field.state.meta;
 
@@ -296,6 +322,9 @@ function TextField({
         onBlur={field.handleBlur}
         onChange={(event) => field.handleChange(event.target.value)}
       />
+      {proposals && name === "hireDate" ? (
+        <ProposalHint name={name} field={field} proposals={proposals} />
+      ) : null}
       <FieldError errors={errors} />
     </Field>
   );
@@ -336,39 +365,6 @@ function WorkEmailField({ field }: { field: AnyFieldApi }) {
       </InputGroup>
       <FieldError errors={errors} />
     </Field>
-  );
-}
-
-function CompaniesField({ field }: { field: AnyFieldApi }) {
-  const { errors } = field.state.meta;
-  const chosen: string[] = field.state.value;
-
-  return (
-    <FieldSet data-invalid={errors.length > 0}>
-      <FieldLegend variant="label">
-        {EMPLOYMENT_FIELDS.companies.label}
-      </FieldLegend>
-      <div className="flex flex-wrap gap-x-6 gap-y-3">
-        {COMPANY_LIST.map((company) => (
-          <Field key={company} orientation="horizontal" className="w-auto">
-            <Checkbox
-              id={`company-${company}`}
-              checked={chosen.includes(company)}
-              aria-invalid={errors.length > 0}
-              onCheckedChange={(checked) =>
-                field.handleChange(
-                  checked
-                    ? [...chosen, company]
-                    : chosen.filter((item) => item !== company)
-                )
-              }
-            />
-            <FieldLabel htmlFor={`company-${company}`}>{company}</FieldLabel>
-          </Field>
-        ))}
-      </div>
-      <FieldError errors={errors} />
-    </FieldSet>
   );
 }
 
@@ -422,7 +418,7 @@ export function EmploymentForm({
   async function pick(file: File) {
     latestUpload.current += 1;
     const attempt = latestUpload.current;
-    const previousProposal = proposalOf(upload);
+    const previous = proposalsOf(upload);
 
     try {
       setUpload({ status: "uploading", fileName: file.name });
@@ -440,12 +436,14 @@ export function EmploymentForm({
       setUpload({ status: "uploaded", ...uploaded });
       save.reset();
 
-      const proposal = uploaded.extraction.fields.dailySalary;
-      const typed = form.getFieldValue("dailySalary").trim();
+      // HR's own value stays; only an empty field or the last proposal makes room for the new one.
+      for (const name of PROPOSAL_NAMES) {
+        const proposal = uploaded.extraction.fields[name];
+        const typed = form.getFieldValue(name).trim();
 
-      // HR's own figure stays; only an empty field or the last proposal makes room for the new one.
-      if (proposal && (typed === "" || typed === previousProposal)) {
-        form.setFieldValue("dailySalary", proposal);
+        if (proposal && (typed === "" || typed === previous[name])) {
+          form.setFieldValue(name, proposal);
+        }
       }
     } catch (error) {
       if (attempt === latestUpload.current) {
@@ -504,8 +502,10 @@ export function EmploymentForm({
             <SelectField name="office" field={field} items={OFFICE_ITEMS} />
           )}
         </form.Field>
-        <form.Field name="companies">
-          {(field) => <CompaniesField field={field} />}
+        <form.Field name="company">
+          {(field) => (
+            <SelectField name="company" field={field} items={COMPANY_ITEMS} />
+          )}
         </form.Field>
         <form.Field name="nationality">
           {(field) => <TextField name="nationality" field={field} />}
@@ -516,12 +516,19 @@ export function EmploymentForm({
           )}
         </form.Field>
         <form.Field name="hireDate">
-          {(field) => <TextField name="hireDate" field={field} type="date" />}
+          {(field) => (
+            <TextField
+              name="hireDate"
+              field={field}
+              type="date"
+              proposals={proposalsOf(upload)}
+            />
+          )}
         </form.Field>
         <ImssRegistrationField upload={upload} onPick={pick} />
         <form.Field name="dailySalary">
           {(field) => (
-            <SalaryField field={field} proposal={proposalOf(upload)} />
+            <SalaryField field={field} proposals={proposalsOf(upload)} />
           )}
         </form.Field>
       </FieldGroup>
