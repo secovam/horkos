@@ -9,6 +9,7 @@ import type { UploadedDocuments } from "@/lib/document-upload";
 import { FAILED_EXTRACTION } from "@/lib/extraction";
 import { hashInvitationToken } from "@/lib/invitation";
 import { POSTAL_CODE_REGEX, applyPostalCode } from "@/lib/postal-code";
+import { PublicError } from "@/lib/public-error";
 import {
   DOCUMENT_KINDS,
   DOCUMENT_KIND_LIST,
@@ -123,7 +124,7 @@ async function findOpenInvitation(token: string) {
     .limit(1);
 
   if (!found || found.submittedAt) {
-    throw new Error(UNAVAILABLE_MESSAGE);
+    throw new PublicError(UNAVAILABLE_MESSAGE);
   }
 
   return found;
@@ -134,7 +135,7 @@ function parseUploadForm(form: FormData) {
   const kind = z.enum(DOCUMENT_KIND_LIST).safeParse(form.get("kind"));
 
   if (!token.success || !kind.success) {
-    throw new Error("Revisa los datos e inténtalo de nuevo.");
+    throw new PublicError("Revisa los datos e inténtalo de nuevo.");
   }
 
   return {
@@ -191,7 +192,7 @@ function parseSubmissionForm(form: FormData) {
 
   if (!token.success || !fields.success) {
     // Messages come from the schema and never echo the submitted values.
-    throw new Error(
+    throw new PublicError(
       fields.error?.issues[0]?.message ??
         "Revisa los datos e inténtalo de nuevo."
     );
@@ -223,7 +224,7 @@ export const submitInvitation = createServerFn({ method: "POST" })
     );
 
     if (!checked.ok) {
-      throw new Error(checked.message);
+      throw new PublicError(checked.message);
     }
 
     const { fields } = checked;
@@ -238,7 +239,9 @@ export const submitInvitation = createServerFn({ method: "POST" })
     );
 
     if (missing) {
-      throw new Error(`Sube tu documento: ${DOCUMENT_KINDS[missing].label}.`);
+      throw new PublicError(
+        `Sube tu documento: ${DOCUMENT_KINDS[missing].label}.`
+      );
     }
 
     // Both statements check the invitation is still open, so a revocation or a second

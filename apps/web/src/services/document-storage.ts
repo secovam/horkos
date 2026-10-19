@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 
 import { ENV } from "@/env.server";
 import type { ExtractionStatus } from "@/lib/extraction";
+import { PublicError } from "@/lib/public-error";
 import { detectDocumentType } from "@/lib/submission";
 import type { StoredDocumentKind } from "@/lib/submission";
 import { getDb } from "@/services";
@@ -33,7 +34,7 @@ export async function storeDocument<
   const contentType = detectDocumentType(new Uint8Array(bytes.slice(0, 8)));
 
   if (!contentType) {
-    throw new Error("Sube un archivo PDF.");
+    throw new PublicError("Sube un archivo PDF.");
   }
 
   await ENV.DOCUMENTS.put(objectKey, bytes, {

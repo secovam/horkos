@@ -24,6 +24,7 @@ import {
 } from "@/lib/employee-record";
 import { employmentDefaults, employmentSchema } from "@/lib/employment";
 import { POSTAL_CODE_REGEX, applyPostalCode } from "@/lib/postal-code";
+import { PublicError } from "@/lib/public-error";
 import {
   hrObjectKey,
   parseDocumentFile,
@@ -213,7 +214,7 @@ export const updateEmployee = createServerFn({ method: "POST" })
     );
 
     if (!checked.ok) {
-      throw new Error(checked.message);
+      throw new PublicError(checked.message);
     }
 
     const { fields } = checked;
@@ -244,7 +245,7 @@ export const updateEmployee = createServerFn({ method: "POST" })
       .returning({ invitationId: submission.invitationId });
 
     if (updated.length === 0) {
-      throw new Error(UNAVAILABLE_RECORD);
+      throw new PublicError(UNAVAILABLE_RECORD);
     }
 
     return { ok: true };
@@ -267,7 +268,7 @@ function parseImssRegistrationForm(form: FormData) {
   });
 
   if (!ids.success) {
-    throw new Error("Revisa los datos e inténtalo de nuevo.");
+    throw new PublicError("Revisa los datos e inténtalo de nuevo.");
   }
 
   return {
@@ -292,7 +293,7 @@ export const uploadImssRegistration = createServerFn({ method: "POST" })
     ]);
 
     if (!open) {
-      throw new Error(UNAVAILABLE_RECORD);
+      throw new PublicError(UNAVAILABLE_RECORD);
     }
 
     const result = await storeDocument({
@@ -384,7 +385,7 @@ export const saveEmployment = createServerFn({ method: "POST" })
         .from(invitation)
         .where(openRecord(invitationId));
 
-      throw new Error(
+      throw new PublicError(
         stillOpen ? IMSS_REGISTRATION_REQUIRED : UNAVAILABLE_RECORD
       );
     }
@@ -424,7 +425,9 @@ export const confirmEmployee = createServerFn({ method: "POST" })
         .from(invitation)
         .where(open);
 
-      throw new Error(stillOpen ? EMPLOYMENT_REQUIRED : UNAVAILABLE_RECORD);
+      throw new PublicError(
+        stillOpen ? EMPLOYMENT_REQUIRED : UNAVAILABLE_RECORD
+      );
     }
 
     return { ok: true };
@@ -448,7 +451,7 @@ export const reopenEmployee = createServerFn({ method: "POST" })
       .returning({ id: invitation.id });
 
     if (updated.length === 0) {
-      throw new Error(CANNOT_REOPEN);
+      throw new PublicError(CANNOT_REOPEN);
     }
 
     return { ok: true };

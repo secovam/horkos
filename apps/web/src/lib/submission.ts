@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { PublicError } from "./public-error";
+
 export const DOCUMENT_KIND_LIST = [
   "tax_status",
   "imss",
@@ -86,7 +88,7 @@ export function parseDocumentFile(value: FormDataEntryValue | null) {
   const file = documentFileSchema.safeParse(value);
 
   if (!file.success) {
-    throw new Error(file.error.issues[0].message);
+    throw new PublicError(file.error.issues[0].message);
   }
 
   return file.data;
