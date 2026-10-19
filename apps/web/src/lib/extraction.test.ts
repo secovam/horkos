@@ -142,7 +142,32 @@ describe("parseDocument proof_of_address", () => {
   });
 });
 
+// Fictional data in the layout LiteParse returns for an IDSE "Constancia de presentación de movimientos afiliatorios".
+const IDSE_CONSTANCIA = `# Constancia de presentación de movimientos afiliatorios IMSS DESDE SU EMPRESA
+
+Razón Social: EMPRESA FICTICIA SA DE CV
+
+| Número de lote: | 100000001 |  |  |
+|---|---|---|---|
+| RFC del patrón: | EFI000101AB1 | Fecha y hora de recepción del lote: | 2026-03-20 08:17 |
+| Registro Patronal: | Z0000000000 | Serial del certificado: | 00000100000200000001 |
+
+Relación de movimientos operados
+
+Tipo NSS Nombre Asegurado Sal. Base Ext. UMF Tipo Fec-Mov Tipo C. Baja
+
+8 12345678901 PRUEBA FICTICIA MARIA $ 695.55 1 069 0 02/03/2026 1 0
+
+Para efectos de lo anterior se entenderá por: Modif. (Modificación de salario), Reing. (Reingreso), Fec-Mov (Fecha de movimiento), NSS (Número de Seguridad Social), Sal. Base (Salario base).`;
+
 describe("parseImssRegistration", () => {
+  it("reads salary and movement date from an IDSE constancia", () => {
+    expect(parseImssRegistration(IDSE_CONSTANCIA)).toEqual({
+      dailySalary: "695.55",
+      hireDate: "2026-03-02",
+    });
+  });
+
   test.each([
     ["Salario Diario: $ 695.55", "695.55"],
     ["Salario Diario Integrado | 695.55 |", "695.55"],

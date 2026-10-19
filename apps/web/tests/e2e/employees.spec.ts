@@ -4,10 +4,11 @@ import { clickUntil, invite, login, toastMessage } from "./actions";
 import { expect, test } from "./fixtures";
 import { openForm, pdfFile, submitWithAllDocuments } from "./submission-flow";
 
-const IMSS_REGISTRATION_TEXT = `Relación de movimientos operados
-Fecha de proceso 20/03/2026
-Fecha de movimiento: 02/03/2026
-12345678901 FICTICIA PRUEBA MARIA ALTA $ 695.55`;
+const IMSS_REGISTRATION_TEXT = `Fecha y hora de recepción del lote: 2026-03-20 08:17
+Relación de movimientos operados
+Tipo NSS Nombre Asegurado Sal. Base Ext. UMF Tipo Fec-Mov Tipo C. Baja
+8 12345678901 PRUEBA FICTICIA MARIA $ 695.55 1 069 0 02/03/2026 1 0
+Fec-Mov (Fecha de movimiento), NSS (Número de Seguridad Social)`;
 
 test("HR reviews a submitted employee and opens their document", async ({
   app,
