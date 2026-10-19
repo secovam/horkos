@@ -2,6 +2,14 @@ import { Alert, AlertDescription } from "@horkos/ui/components/alert";
 import { Badge } from "@horkos/ui/components/badge";
 import { Button } from "@horkos/ui/components/button";
 import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from "@horkos/ui/components/combobox";
+import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
@@ -41,6 +49,7 @@ import {
   formatHireDate,
   DEPARTMENT_LIST,
   EMPLOYMENT_FIELDS,
+  JOB_TITLE_LIST,
   OFFICE_LIST,
   SEXES,
   SEX_LIST,
@@ -255,6 +264,42 @@ const SEX_ITEMS = SEX_LIST.map((value) => ({
   value,
   label: SEXES[value].label,
 }));
+
+function JobTitleField({ field }: { field: AnyFieldApi }) {
+  const { errors } = field.state.meta;
+
+  return (
+    <Field data-invalid={errors.length > 0}>
+      <FieldLabel htmlFor="jobTitle">
+        {EMPLOYMENT_FIELDS.jobTitle.label}
+      </FieldLabel>
+      <Combobox
+        name="jobTitle"
+        items={JOB_TITLE_LIST}
+        value={field.state.value || null}
+        onValueChange={(value) => field.handleChange(value ?? "")}
+      >
+        <ComboboxInput
+          id="jobTitle"
+          placeholder="Busca un puesto"
+          aria-invalid={errors.length > 0}
+          onBlur={field.handleBlur}
+        />
+        <ComboboxContent>
+          <ComboboxEmpty>No encontramos ese puesto.</ComboboxEmpty>
+          <ComboboxList>
+            {(item: string) => (
+              <ComboboxItem key={item} value={item}>
+                {item}
+              </ComboboxItem>
+            )}
+          </ComboboxList>
+        </ComboboxContent>
+      </Combobox>
+      <FieldError errors={errors} />
+    </Field>
+  );
+}
 
 function SelectField({
   name,
@@ -483,7 +528,7 @@ export function EmploymentForm({
           )}
         </form.Field>
         <form.Field name="jobTitle">
-          {(field) => <TextField name="jobTitle" field={field} />}
+          {(field) => <JobTitleField field={field} />}
         </form.Field>
         <form.Field name="department">
           {(field) => (

@@ -5,7 +5,7 @@ import { employmentDefaults, employmentSchema } from "./employment";
 const valid = {
   workEmail: " Ana.Prueba@secovam.com ",
   personalEmail: "ana@example.com",
-  jobTitle: " Analista ",
+  jobTitle: "Analista de Compras",
   department: "Calidad",
   manager: "",
   office: "CDMX",
@@ -17,10 +17,10 @@ const valid = {
 };
 
 describe("employmentSchema", () => {
-  test("trims text, lowercases emails and allows an empty manager", () => {
+  test("lowercases emails and allows an empty manager", () => {
     expect(employmentSchema.parse(valid)).toMatchObject({
       workEmail: "ana.prueba@secovam.com",
-      jobTitle: "Analista",
+      jobTitle: "Analista de Compras",
       manager: "",
     });
   });
@@ -31,9 +31,11 @@ describe("employmentSchema", () => {
     ["workEmail", "a b@secovam.com"],
     ["workEmail", "ana@secovam.com.mx"],
     ["personalEmail", "ana"],
-    ["jobTitle", "  "],
+    ["jobTitle", ""],
+    ["jobTitle", "Analista de calidad"],
     ["department", ""],
     ["department", "Cocina"],
+    ["department", "Ventas"],
     ["office", "Marte"],
     ["company", ""],
     ["company", "OTRA"],
@@ -82,6 +84,29 @@ describe("employmentSchema", () => {
 });
 
 describe("employmentDefaults", () => {
+  test("leaves a saved job title or department outside the catalogs unselected", () => {
+    const saved = {
+      workEmail: null,
+      personalEmail: "ana@example.com",
+      jobTitle: "Analista de calidad",
+      department: "Ventas",
+      manager: null,
+      office: "CDMX",
+      company: "SECOVAM",
+      nationality: "Mexicana",
+      sex: "female",
+      hireDate: "2026-02-28",
+      dailySalaryCents: 69_555,
+    };
+
+    expect(
+      employmentDefaults(saved, {
+        invitationEmail: "ana@example.com",
+        curp: "",
+      })
+    ).toMatchObject({ jobTitle: "", department: "" });
+  });
+
   const context = {
     invitationEmail: "ana@example.com",
     curp: "XEXX010101HNERXX08",

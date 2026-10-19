@@ -202,13 +202,14 @@ test("HR corrects the data, confirms the record and reopens it", async ({
   );
   await expect(page.getByLabel("Nacionalidad")).toHaveValue("Mexicana");
   await page.getByRole("button", { name: "Guardar" }).click();
-  await expect(page.getByText("Escribe el puesto.")).toBeVisible();
+  await expect(page.getByText("Elige el puesto.")).toBeVisible();
   await expect(page.getByText("Elige la empresa.")).toBeVisible();
 
-  await page.getByLabel("Puesto").fill("Analista de calidad");
+  await page.getByRole("combobox", { name: "Puesto" }).fill("compras");
+  await page.getByRole("option", { name: "Analista de Compras" }).click();
   await page.getByLabel("Jefe inmediato (opcional)").fill("Luis Ficticio");
   await page.getByRole("combobox", { name: "Departamento" }).click();
-  await page.getByRole("option", { name: "Calidad" }).click();
+  await page.getByRole("option", { name: "Calidad", exact: true }).click();
   await page.getByRole("combobox", { name: "Oficina" }).click();
   await page.getByRole("option", { name: "CDMX" }).click();
   await page.getByRole("combobox", { name: "Empresa" }).click();
@@ -280,12 +281,11 @@ test("HR corrects the data, confirms the record and reopens it", async ({
     page.getByLabel("Puesto")
   );
   await expect(page.getByLabel("Salario diario")).toHaveValue("695.55");
-  await page.getByLabel("Puesto").fill("Coordinadora de calidad");
+  await page.getByRole("combobox", { name: "Puesto" }).fill("almacén");
+  await page.getByRole("option", { name: "Jefe de Almacén" }).click();
   await page.getByRole("button", { name: "Guardar" }).click();
   await expect(toastMessage(page, "Datos laborales guardados")).toBeVisible();
-  await expect(fieldRow(page, "Puesto")).toContainText(
-    "Coordinadora de calidad"
-  );
+  await expect(fieldRow(page, "Puesto")).toContainText("Jefe de Almacén");
 
   await clickUntil(
     page.getByRole("button", { name: "Confirmar datos" }),
