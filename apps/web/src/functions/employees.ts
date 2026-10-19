@@ -1,7 +1,17 @@
+import { employment } from "@horkos/db/schema/employment";
 import { invitation } from "@horkos/db/schema/invitation";
 import { document, extraction, submission } from "@horkos/db/schema/submission";
 import { createServerFn } from "@tanstack/react-start";
-import { and, count, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  sql,
+} from "drizzle-orm";
 import { z } from "zod";
 
 import {
@@ -11,6 +21,7 @@ import {
   reviewSubmission,
   toFormValues,
 } from "@/lib/employee-record";
+import { employmentDefaults, employmentSchema } from "@/lib/employment";
 import { POSTAL_CODE_REGEX, applyPostalCode } from "@/lib/postal-code";
 import { submissionSchema } from "@/lib/submission";
 import { requireSessionMiddleware } from "@/middleware/auth";
@@ -102,7 +113,7 @@ export const getEmployee = createServerFn({ method: "POST" })
       return null;
     }
 
-    const [documents, extractions] = await Promise.all([
+    const [documents, extractions, [savedEmployment]] = await Promise.all([
       db
         .select({
           kind: document.kind,
@@ -121,6 +132,10 @@ export const getEmployee = createServerFn({ method: "POST" })
         })
         .from(extraction)
         .where(eq(extraction.invitationId, invitationId)),
+      db
+        .select()
+        .from(employment)
+        .where(eq(employment.invitationId, invitationId)),
     ]);
 
     const { submitted, ...employee } = found;
@@ -128,6 +143,11 @@ export const getEmployee = createServerFn({ method: "POST" })
     return {
       employee,
       values: toFormValues(submitted),
+      employmentValues: employmentDefaults(savedEmployment ?? null, {
+        invitationEmail: employee.email,
+        curp: submitted.curp,
+      }),
+      employmentComplete: savedEmployment !== undefined,
       documents,
       extractions: extractions.map(({ kind, status, warnings }) => ({
         kind,
@@ -199,24 +219,96 @@ export const updateEmployee = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+const EMPLOYMENT_REQUIRED = "Completa los datos laborales antes de confirmar.";
+
+const saveEmploymentSchema = employeeIdSchema.extend({
+  fields: employmentSchema,
+});
+
+export const saveEmployment = createServerFn({ method: "POST" })
+  .middleware([requireSessionMiddleware])
+  .validator(saveEmploymentSchema)
+  .handler(async ({ data: { invitationId, fields } }) => {
+    const stored = { ...fields, manager: fields.manager || null };
+
+    // The insert reads from the guarded invitation row, so a confirmation that lands meanwhile writes nothing.
+    const saved = await getDb()
+      .insert(employment)
+      .select(
+        getDb()
+          .select({
+            invitationId: invitation.id,
+            workEmail: sql<string>`${stored.workEmail}`.as("work_email"),
+            personalEmail: sql<string>`${stored.personalEmail}`.as(
+              "personal_email"
+            ),
+            jobTitle: sql<string>`${stored.jobTitle}`.as("job_title"),
+            department: sql<string>`${stored.department}`.as("department"),
+            manager: sql<string | null>`${stored.manager}`.as("manager"),
+            office: sql<string>`${stored.office}`.as("office"),
+            companies: sql<string>`${JSON.stringify(stored.companies)}`.as(
+              "companies"
+            ),
+            nationality: sql<string>`${stored.nationality}`.as("nationality"),
+            sex: sql<string>`${stored.sex}`.as("sex"),
+            hireDate: sql<string>`${stored.hireDate}`.as("hire_date"),
+            updatedAt: sql<number>`${Date.now()}`.as("updated_at"),
+          })
+          .from(invitation)
+          .where(
+            and(
+              eq(invitation.id, invitationId),
+              SUBMITTED_AND_ACTIVE,
+              isNull(invitation.hrCompletedAt)
+            )
+          )
+      )
+      .onConflictDoUpdate({
+        target: employment.invitationId,
+        set: { ...stored, updatedAt: new Date() },
+      })
+      .returning({ invitationId: employment.invitationId });
+
+    if (saved.length === 0) {
+      throw new Error(UNAVAILABLE_RECORD);
+    }
+
+    return { ok: true };
+  });
+
 export const confirmEmployee = createServerFn({ method: "POST" })
   .middleware([requireSessionMiddleware])
   .validator(employeeIdSchema)
   .handler(async ({ data: { invitationId } }) => {
-    const updated = await getDb()
+    const db = getDb();
+
+    const open = and(
+      eq(invitation.id, invitationId),
+      SUBMITTED_AND_ACTIVE,
+      isNull(invitation.hrCompletedAt)
+    );
+
+    const updated = await db
       .update(invitation)
       .set({ hrCompletedAt: new Date() })
       .where(
         and(
-          eq(invitation.id, invitationId),
-          SUBMITTED_AND_ACTIVE,
-          isNull(invitation.hrCompletedAt)
+          open,
+          inArray(
+            invitation.id,
+            db.select({ id: employment.invitationId }).from(employment)
+          )
         )
       )
       .returning({ id: invitation.id });
 
     if (updated.length === 0) {
-      throw new Error(UNAVAILABLE_RECORD);
+      const [stillOpen] = await db
+        .select({ id: invitation.id })
+        .from(invitation)
+        .where(open);
+
+      throw new Error(stillOpen ? EMPLOYMENT_REQUIRED : UNAVAILABLE_RECORD);
     }
 
     return { ok: true };

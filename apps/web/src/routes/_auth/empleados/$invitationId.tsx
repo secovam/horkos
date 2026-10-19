@@ -6,6 +6,8 @@ import { useState } from "react";
 
 import { EmployeeDocuments } from "@/components/employees/employee-documents";
 import { EmployeeEditForm } from "@/components/employees/employee-edit-form";
+import { EmploymentForm } from "@/components/employees/employment-form";
+import { EmploymentSection } from "@/components/employees/employment-section";
 import { FieldReviewSection } from "@/components/employees/field-review-section";
 import { RecordAction } from "@/components/employees/record-action";
 import { EmptyStateCard } from "@/components/invitations/invitations-empty-state";
@@ -73,11 +75,22 @@ function StateBadge({
 }
 
 function EmployeePage() {
-  const { employee, values, review, documents, extractions } =
-    Route.useLoaderData();
+  const {
+    employee,
+    values,
+    employmentValues,
+    employmentComplete,
+    review,
+    documents,
+    extractions,
+  } = Route.useLoaderData();
 
   const { invitationId } = Route.useParams();
-  const [editing, setEditing] = useState(false);
+
+  const [editing, setEditing] = useState<"none" | "submission" | "employment">(
+    "none"
+  );
+
   const confirmed = recordState(employee.hrCompletedAt) === "confirmed";
 
   return (
@@ -99,15 +112,27 @@ function EmployeePage() {
             {confirmed ? (
               <RecordAction action="reopen" invitationId={invitationId} />
             ) : null}
-            {confirmed || editing ? null : (
+            {confirmed || editing !== "none" ? null : (
               <>
-                <Button variant="outline" onClick={() => setEditing(true)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setEditing("employment")}
+                >
+                  {employmentComplete
+                    ? "Editar datos laborales"
+                    : "Completar datos laborales"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setEditing("submission")}
+                >
                   Editar datos
                 </Button>
                 <RecordAction
                   action="confirm"
                   invitationId={invitationId}
                   needsAttention={review.needsAttention}
+                  employmentComplete={employmentComplete}
                 />
               </>
             )}
@@ -115,12 +140,12 @@ function EmployeePage() {
         }
       />
 
-      {editing && !confirmed ? (
+      {editing === "submission" && !confirmed ? (
         <EmployeeEditForm
           invitationId={invitationId}
           values={values}
           fields={review.fields}
-          onDone={() => setEditing(false)}
+          onDone={() => setEditing("none")}
         />
       ) : (
         SECTIONS.map((section) => (
@@ -130,6 +155,19 @@ function EmployeePage() {
             fields={review.fields}
           />
         ))
+      )}
+
+      {editing === "employment" && !confirmed ? (
+        <EmploymentForm
+          invitationId={invitationId}
+          values={employmentValues}
+          onDone={() => setEditing("none")}
+        />
+      ) : (
+        <EmploymentSection
+          values={employmentValues}
+          complete={employmentComplete}
+        />
       )}
 
       <EmployeeDocuments

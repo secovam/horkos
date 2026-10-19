@@ -134,7 +134,7 @@ test("HR corrects the data, confirms the record and reopens it", async ({
     .click();
   await expect(fieldRow(page, "RFC")).toContainText("Difiere");
 
-  await page.getByRole("button", { name: "Editar datos" }).click();
+  await page.getByRole("button", { name: "Editar datos", exact: true }).click();
   await expect(page.getByLabel("Municipio o alcaldía")).toBeDisabled();
   await expect(page.getByRole("combobox", { name: "Colonia" })).toBeVisible();
   await page.getByLabel("RFC", { exact: true }).fill("123");
@@ -152,20 +152,89 @@ test("HR corrects the data, confirms the record and reopens it", async ({
   await expect(fieldRow(page, "RFC")).toContainText("XBXX020202CD3");
 
   await clickUntil(
-    page.getByRole("button", { name: "Editar datos" }),
+    page.getByRole("button", { name: "Editar datos", exact: true }),
     page.getByLabel("RFC", { exact: true })
   );
   await page.getByLabel("RFC", { exact: true }).fill("xaxx010101ab1");
   await page.getByRole("button", { name: "Guardar" }).click();
   await expect(toastMessage(page, "Datos guardados")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Editar datos" })
+    page.getByRole("button", { name: "Editar datos", exact: true })
   ).toBeVisible();
   await expect(fieldRow(page, "RFC")).toContainText("Coincide");
 
   await page.reload();
   await expect(fieldRow(page, "RFC")).toContainText("XAXX010101AB1");
   await expect(fieldRow(page, "RFC")).toContainText("Coincide");
+
+  await expect(
+    page.getByText("RH aún no completa los datos laborales")
+  ).toBeVisible();
+  await clickUntil(
+    page.getByRole("button", { name: "Confirmar datos" }),
+    page.getByRole("alertdialog")
+  );
+  await expect(page.getByRole("alertdialog")).toContainText(
+    "Completa los datos laborales antes de confirmar"
+  );
+  await expect(
+    page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Confirmar datos" })
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "Cancelar" }).click();
+
+  await clickUntil(
+    page.getByRole("button", { name: "Completar datos laborales" }),
+    page.getByLabel("Puesto")
+  );
+  await expect(
+    page.getByRole("button", { name: "Editar datos", exact: true })
+  ).toBeHidden();
+  await expect(page.getByLabel("Correo personal")).toHaveValue(
+    "employee@example.com"
+  );
+  await expect(page.getByLabel("Nacionalidad")).toHaveValue("Mexicana");
+  await page.getByRole("button", { name: "Guardar" }).click();
+  await expect(page.getByText("Escribe el puesto.")).toBeVisible();
+  await expect(page.getByText("Elige al menos una empresa.")).toBeVisible();
+
+  await page
+    .getByRole("textbox", { name: "Correo de trabajo" })
+    .fill("ana.prueba");
+  await page.getByLabel("Puesto").fill("Analista de calidad");
+  await page.getByLabel("Jefe inmediato (opcional)").fill("Luis Ficticio");
+  await page.getByRole("combobox", { name: "Departamento" }).click();
+  await page.getByRole("option", { name: "Calidad" }).click();
+  await page.getByRole("combobox", { name: "Oficina" }).click();
+  await page.getByRole("option", { name: "CDMX" }).click();
+  await page.getByRole("checkbox", { name: "SERALAM" }).click();
+  await page.getByRole("checkbox", { name: "SECOVAM" }).click();
+  await page.getByRole("combobox", { name: "Sexo" }).click();
+  await page.getByRole("option", { name: "Femenino" }).click();
+  await page.getByLabel("Fecha de ingreso").fill("2026-03-02");
+  await page.getByRole("button", { name: "Guardar" }).click();
+  await expect(toastMessage(page, "Datos laborales guardados")).toBeVisible();
+
+  await page.reload();
+  await expect(fieldRow(page, "Correo de trabajo")).toContainText(
+    "ana.prueba@secovam.com"
+  );
+  await expect(fieldRow(page, "Empresas")).toContainText("SERALAM, SECOVAM");
+  await expect(fieldRow(page, "Sexo")).toContainText("Femenino");
+  await expect(fieldRow(page, "Fecha de ingreso")).toContainText(
+    "2 de marzo de 2026"
+  );
+  await clickUntil(
+    page.getByRole("button", { name: "Editar datos laborales" }),
+    page.getByLabel("Puesto")
+  );
+  await page.getByLabel("Puesto").fill("Coordinadora de calidad");
+  await page.getByRole("button", { name: "Guardar" }).click();
+  await expect(toastMessage(page, "Datos laborales guardados")).toBeVisible();
+  await expect(fieldRow(page, "Puesto")).toContainText(
+    "Coordinadora de calidad"
+  );
 
   await clickUntil(
     page.getByRole("button", { name: "Confirmar datos" }),
@@ -180,7 +249,12 @@ test("HR corrects the data, confirms the record and reopens it", async ({
     .click();
 
   await expect(page.getByText("Confirmado", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Editar datos" })).toBeHidden();
+  await expect(
+    page.getByRole("button", { name: "Editar datos", exact: true })
+  ).toBeHidden();
+  await expect(
+    page.getByRole("button", { name: "Editar datos laborales" })
+  ).toBeHidden();
   await expect(
     page.getByRole("button", { name: "Corregir datos" })
   ).toBeVisible();
@@ -212,7 +286,7 @@ test("HR corrects the data, confirms the record and reopens it", async ({
     .getByRole("button", { name: "Corregir datos" })
     .click();
   await expect(
-    page.getByRole("button", { name: "Editar datos" })
+    page.getByRole("button", { name: "Editar datos", exact: true })
   ).toBeVisible();
   await expect(page.getByText("Confirmado", { exact: true })).toBeHidden();
 });
