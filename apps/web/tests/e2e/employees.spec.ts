@@ -207,8 +207,6 @@ test("HR corrects the data, confirms the record and reopens it", async ({
 
   await page.getByRole("combobox", { name: "Puesto" }).fill("compras");
   await page.getByRole("option", { name: "Analista de Compras" }).click();
-  await page.getByRole("combobox", { name: "Departamento" }).click();
-  await page.getByRole("option", { name: "Calidad", exact: true }).click();
   await page.getByRole("combobox", { name: "Empresa" }).click();
   await page.getByRole("option", { name: "SECOVAM" }).click();
   await page.getByRole("combobox", { name: "Sexo" }).click();

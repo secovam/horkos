@@ -1,14 +1,7 @@
-import {
-  DEPARTMENT_VALUES,
-  JOB_TITLE_VALUES,
-} from "@horkos/db/schema/employment";
+import { JOB_TITLE_VALUES } from "@horkos/db/schema/employment";
 import { z } from "zod";
 
 import type { ImssProposals } from "./extraction";
-
-export const DEPARTMENT_LIST = DEPARTMENT_VALUES;
-
-export type Department = (typeof DEPARTMENT_LIST)[number];
 
 export const JOB_TITLE_LIST = JOB_TITLE_VALUES;
 
@@ -129,7 +122,6 @@ export const employmentSchema = z.object({
     .toLowerCase()
     .pipe(z.email("Escribe un correo personal válido.")),
   jobTitle: choice(JOB_TITLE_LIST, "Elige el puesto."),
-  department: choice(DEPARTMENT_LIST, "Elige el departamento."),
   company: choice(COMPANY_LIST, "Elige la empresa."),
   nationality: required("Escribe la nacionalidad."),
   sex: choice(SEX_LIST, "Elige el sexo."),
@@ -148,7 +140,6 @@ export const EMPLOYMENT_FIELDS = {
   workEmail: { label: "Correo de trabajo (opcional)" },
   personalEmail: { label: "Correo personal" },
   jobTitle: { label: "Puesto" },
-  department: { label: "Departamento" },
   company: { label: "Empresa" },
   nationality: { label: "Nacionalidad" },
   sex: { label: "Sexo" },
@@ -160,7 +151,6 @@ export interface StoredEmployment {
   workEmail: string | null;
   personalEmail: string;
   jobTitle: string;
-  department: string;
   company: string;
   nationality: string;
   sex: string;
@@ -196,7 +186,6 @@ export function employmentDefaults(
       workEmail: saved.workEmail ?? "",
       personalEmail: saved.personalEmail,
       jobTitle: inList(JOB_TITLE_LIST, saved.jobTitle),
-      department: inList(DEPARTMENT_LIST, saved.department),
       company: saved.company,
       nationality: saved.nationality,
       sex: saved.sex,
@@ -209,7 +198,6 @@ export function employmentDefaults(
     workEmail: "",
     personalEmail: invitationEmail,
     jobTitle: "",
-    department: "",
     company: "",
     nationality: DEFAULT_NATIONALITY,
     sex: sexFromCurp(curp),

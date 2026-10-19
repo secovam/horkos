@@ -6,7 +6,6 @@ const valid = {
   workEmail: " Ana.Prueba@secovam.com ",
   personalEmail: "ana@example.com",
   jobTitle: "Analista de Compras",
-  department: "Calidad",
   company: "SECOVAM",
   nationality: "Mexicana",
   sex: "female",
@@ -30,9 +29,6 @@ describe("employmentSchema", () => {
     ["personalEmail", "ana"],
     ["jobTitle", ""],
     ["jobTitle", "Analista de calidad"],
-    ["department", ""],
-    ["department", "Cocina"],
-    ["department", "Ventas"],
     ["company", ""],
     ["company", "OTRA"],
     ["company", ["SERALAM"]],
@@ -80,12 +76,11 @@ describe("employmentSchema", () => {
 });
 
 describe("employmentDefaults", () => {
-  test("leaves a saved job title or department outside the catalogs unselected", () => {
+  test("leaves a saved job title outside the catalog unselected", () => {
     const saved = {
       workEmail: null,
       personalEmail: "ana@example.com",
       jobTitle: "Analista de calidad",
-      department: "Ventas",
       company: "SECOVAM",
       nationality: "Mexicana",
       sex: "female",
@@ -98,7 +93,7 @@ describe("employmentDefaults", () => {
         invitationEmail: "ana@example.com",
         curp: "",
       })
-    ).toMatchObject({ jobTitle: "", department: "" });
+    ).toMatchObject({ jobTitle: "" });
   });
 
   const context = {
@@ -111,7 +106,6 @@ describe("employmentDefaults", () => {
       workEmail: "",
       personalEmail: "ana@example.com",
       jobTitle: "",
-      department: "",
       company: "",
       nationality: "Mexicana",
       sex: "male",

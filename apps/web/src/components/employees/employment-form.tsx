@@ -48,7 +48,6 @@ import { saveEmployment, uploadImssRegistration } from "@/functions/employees";
 import {
   COMPANY_LIST,
   formatHireDate,
-  DEPARTMENT_LIST,
   EMPLOYMENT_FIELDS,
   JOB_TITLE_LIST,
   SEXES,
@@ -254,11 +253,6 @@ function SalaryField({
     </Field>
   );
 }
-
-const DEPARTMENT_ITEMS = DEPARTMENT_LIST.map((value) => ({
-  value,
-  label: value,
-}));
 
 const COMPANY_ITEMS = COMPANY_LIST.map((value) => ({ value, label: value }));
 
@@ -539,15 +533,6 @@ export function EmploymentForm({
         </form.Field>
         <form.Field name="jobTitle">
           {(field) => <JobTitleField field={field} />}
-        </form.Field>
-        <form.Field name="department">
-          {(field) => (
-            <SelectField
-              name="department"
-              field={field}
-              items={DEPARTMENT_ITEMS}
-            />
-          )}
         </form.Field>
         <form.Field name="company">
           {(field) => (

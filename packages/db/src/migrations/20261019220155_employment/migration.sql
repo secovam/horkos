@@ -3,7 +3,6 @@ CREATE TABLE `employment` (
 	`work_email` text,
 	`personal_email` text NOT NULL,
 	`job_title` text NOT NULL,
-	`department` text NOT NULL,
 	`company` text NOT NULL,
 	`nationality` text NOT NULL,
 	`sex` text NOT NULL,

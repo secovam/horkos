@@ -344,7 +344,6 @@ export const saveEmployment = createServerFn({ method: "POST" })
               "personal_email"
             ),
             jobTitle: sql<string>`${stored.jobTitle}`.as("job_title"),
-            department: sql<string>`${stored.department}`.as("department"),
             company: sql<string>`${stored.company}`.as("company"),
             nationality: sql<string>`${stored.nationality}`.as("nationality"),
             sex: sql<string>`${stored.sex}`.as("sex"),
