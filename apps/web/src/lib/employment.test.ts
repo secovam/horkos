@@ -16,6 +16,20 @@ const valid = {
 };
 
 describe("employmentSchema", () => {
+  test("keeps the chosen office only for SECOLAM", () => {
+    expect(employmentSchema.parse(valid).office).toBe("Matriz");
+    expect(
+      employmentSchema.parse({ ...valid, company: "SECOLAM" }).office
+    ).toBe("CDMX");
+  });
+
+  test("asks SECOLAM for an office", () => {
+    expect(
+      employmentSchema.safeParse({ ...valid, company: "SECOLAM", office: "" })
+        .success
+    ).toBe(false);
+  });
+
   test("lowercases emails", () => {
     expect(employmentSchema.parse(valid)).toMatchObject({
       workEmail: "ana.prueba@secovam.com",
@@ -115,8 +129,8 @@ describe("employmentDefaults", () => {
       personalEmail: "ana@example.com",
       jobTitle: "",
       department: "",
-      office: "",
       company: "",
+      office: "Matriz",
       nationality: "Mexicana",
       sex: "male",
       hireDate: "",

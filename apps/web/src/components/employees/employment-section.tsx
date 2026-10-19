@@ -9,7 +9,7 @@ import {
   EMPLOYMENT_FIELDS,
   SEXES,
   SEX_LIST,
-  employmentSchema,
+  EMPLOYMENT_FIELD_NAMES,
   formatHireDate,
   formatSalary,
 } from "@/lib/employment";
@@ -40,7 +40,7 @@ function displayEmployment(
   return value || "—";
 }
 
-const NAMES = employmentSchema.keyof().options;
+const NAMES = EMPLOYMENT_FIELD_NAMES;
 
 export function EmploymentSection({
   values,

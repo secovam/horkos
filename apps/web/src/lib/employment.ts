@@ -22,6 +22,13 @@ export const OFFICE_LIST = [
 
 export type Office = (typeof OFFICE_LIST)[number];
 
+export const DEFAULT_OFFICE = "Matriz" satisfies Office;
+
+// Only SECOLAM works from several offices; every other company works from Matriz.
+export function hasOffices(company: string) {
+  return company === "SECOLAM";
+}
+
 export const DEPARTMENT_LIST = DEPARTMENT_VALUES;
 
 export type Department = (typeof DEPARTMENT_LIST)[number];
@@ -123,7 +130,7 @@ export function formatHireDate(isoDate: string) {
   return hireDateFormat.format(new Date(`${isoDate}T00:00:00Z`));
 }
 
-export const employmentSchema = z.object({
+const employmentFieldsSchema = z.object({
   workEmail: z
     .string()
     .trim()
@@ -146,14 +153,21 @@ export const employmentSchema = z.object({
     .pipe(z.email("Escribe un correo personal válido.")),
   jobTitle: choice(JOB_TITLE_LIST, "Elige el puesto."),
   department: choice(DEPARTMENT_LIST, "Elige el departamento."),
-  office: choice(OFFICE_LIST, "Elige la oficina."),
   company: choice(COMPANY_LIST, "Elige la empresa."),
+  office: choice(OFFICE_LIST, "Elige la oficina."),
   nationality: required("Escribe la nacionalidad."),
   sex: choice(SEX_LIST, "Elige el sexo."),
   hireDate: z.string().refine(isHireDate, "Elige una fecha de ingreso válida."),
   // Parses to cents, so the output value is not the input string.
   dailySalary: dailySalarySchema,
 });
+
+export const EMPLOYMENT_FIELD_NAMES = employmentFieldsSchema.keyof().options;
+
+export const employmentSchema = employmentFieldsSchema.transform((fields) => ({
+  ...fields,
+  office: hasOffices(fields.company) ? fields.office : DEFAULT_OFFICE,
+}));
 
 export type EmploymentInput = z.input<typeof employmentSchema>;
 
@@ -164,8 +178,8 @@ export const EMPLOYMENT_FIELDS = {
   personalEmail: { label: "Correo personal" },
   jobTitle: { label: "Puesto" },
   department: { label: "Departamento" },
-  office: { label: "Oficina" },
   company: { label: "Empresa" },
+  office: { label: "Oficina" },
   nationality: { label: "Nacionalidad" },
   sex: { label: "Sexo" },
   hireDate: { label: "Fecha de ingreso" },
@@ -228,8 +242,8 @@ export function employmentDefaults(
     personalEmail: invitationEmail,
     jobTitle: "",
     department: "",
-    office: "",
     company: "",
+    office: DEFAULT_OFFICE,
     nationality: DEFAULT_NATIONALITY,
     sex: sexFromCurp(curp),
     hireDate: proposals?.hireDate ?? "",

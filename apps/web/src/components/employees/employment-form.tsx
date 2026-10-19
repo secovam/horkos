@@ -51,7 +51,9 @@ import {
   DEPARTMENT_LIST,
   EMPLOYMENT_FIELDS,
   JOB_TITLE_LIST,
+  DEFAULT_OFFICE,
   OFFICE_LIST,
+  hasOffices,
   SEXES,
   SEX_LIST,
   WORK_EMAIL_DOMAIN,
@@ -552,16 +554,35 @@ export function EmploymentForm({
             />
           )}
         </form.Field>
-        <form.Field name="office">
-          {(field) => (
-            <SelectField name="office" field={field} items={OFFICE_ITEMS} />
-          )}
-        </form.Field>
-        <form.Field name="company">
+        <form.Field
+          name="company"
+          listeners={{
+            onChange: ({ value }) =>
+              form.setFieldValue(
+                "office",
+                hasOffices(value) ? "" : DEFAULT_OFFICE
+              ),
+          }}
+        >
           {(field) => (
             <SelectField name="company" field={field} items={COMPANY_ITEMS} />
           )}
         </form.Field>
+        <form.Subscribe selector={(state) => hasOffices(state.values.company)}>
+          {(withOffices) =>
+            withOffices ? (
+              <form.Field name="office">
+                {(field) => (
+                  <SelectField
+                    name="office"
+                    field={field}
+                    items={OFFICE_ITEMS}
+                  />
+                )}
+              </form.Field>
+            ) : null
+          }
+        </form.Subscribe>
         <form.Field name="nationality">
           {(field) => <TextField name="nationality" field={field} />}
         </form.Field>

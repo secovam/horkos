@@ -209,10 +209,14 @@ test("HR corrects the data, confirms the record and reopens it", async ({
   await page.getByRole("option", { name: "Analista de Compras" }).click();
   await page.getByRole("combobox", { name: "Departamento" }).click();
   await page.getByRole("option", { name: "Calidad", exact: true }).click();
+  await expect(page.getByRole("combobox", { name: "Oficina" })).toBeHidden();
+  await page.getByRole("combobox", { name: "Empresa" }).click();
+  await page.getByRole("option", { name: "SECOLAM" }).click();
   await page.getByRole("combobox", { name: "Oficina" }).click();
   await page.getByRole("option", { name: "CDMX" }).click();
   await page.getByRole("combobox", { name: "Empresa" }).click();
   await page.getByRole("option", { name: "SECOVAM" }).click();
+  await expect(page.getByRole("combobox", { name: "Oficina" })).toBeHidden();
   await page.getByRole("combobox", { name: "Sexo" }).click();
   await page.getByRole("option", { name: "Femenino" }).click();
   await page.getByLabel("Fecha de ingreso").fill("2026-03-05");
@@ -275,6 +279,7 @@ test("HR corrects the data, confirms the record and reopens it", async ({
     "—"
   );
   await expect(fieldRow(page, "Empresa")).toContainText("SECOVAM");
+  await expect(fieldRow(page, "Oficina")).toContainText("Matriz");
   await expect(fieldRow(page, "Sexo")).toContainText("Femenino");
   await expect(fieldRow(page, "Fecha de ingreso")).toContainText(
     "2 de marzo de 2026"
