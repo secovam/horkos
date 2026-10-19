@@ -77,6 +77,14 @@ test("HR reviews a submitted employee and opens their document", async ({
   ).toHaveCount(3);
   await expect(documents.getByText("Leído", { exact: true })).toHaveCount(0);
 
+  const toTop = page.getByRole("button", { name: "Volver arriba" });
+  await expect(toTop).toBeHidden();
+  await documents.scrollIntoViewIfNeeded();
+  await expect(toTop).toBeVisible();
+  await toTop.click();
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  await expect(toTop).toBeHidden();
+
   const link = page.getByRole("link", { name: "Ver documento" }).first();
   const href = await link.getAttribute("href");
 

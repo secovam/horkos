@@ -13,6 +13,7 @@ import { FieldReviewSection } from "@/components/employees/field-review-section"
 import { RecordAction } from "@/components/employees/record-action";
 import { EmptyStateCard } from "@/components/invitations/invitations-empty-state";
 import { PageHeader } from "@/components/layout/page-header";
+import { ScrollToTop } from "@/components/layout/scroll-to-top";
 import { getEmployee } from "@/functions/employees";
 import { recordState } from "@/lib/employee-record";
 
@@ -196,6 +197,8 @@ function EmployeePage() {
         documents={documents}
         extractions={extractions}
       />
+
+      <ScrollToTop />
     </>
   );
 }
