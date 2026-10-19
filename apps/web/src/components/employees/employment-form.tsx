@@ -484,6 +484,8 @@ export function EmploymentForm({
 
       setUpload({ status: "uploaded", ...uploaded });
       save.reset();
+      // Refreshes the loader for the next time the dialog opens; the open form keeps its values.
+      void router.invalidate();
 
       // HR's own value stays; only an empty field or the last proposal makes room for the new one.
       for (const name of PROPOSAL_NAMES) {

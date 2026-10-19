@@ -37,10 +37,29 @@ test("HR reviews a submitted employee and opens their document", async ({
     fullPage: true,
   });
 
+  const serverFnRequest = page.waitForRequest(
+    (request) =>
+      request.method() === "POST" && request.url().includes("/_serverFn/")
+  );
+
   await row.getByRole("link", { name: /Ver detalle/u }).click();
   await expect(
     page.getByRole("heading", { name: "Maria Ficticia Prueba" })
   ).toBeVisible();
+
+  const captured = await serverFnRequest;
+
+  function replay(fetchSite: string) {
+    return page.request.post(captured.url(), {
+      headers: { ...captured.headers(), "sec-fetch-site": fetchSite },
+      data: captured.postDataBuffer() ?? undefined,
+    });
+  }
+
+  const sameSite = await replay("same-origin");
+  const crossSite = await replay("cross-site");
+  expect(sameSite.status()).toBe(200);
+  expect(crossSite.status()).toBe(403);
 
   const rfc = page
     .locator("div")
@@ -308,6 +327,22 @@ test("HR corrects the data, confirms the record and reopens it", async ({
   await page.getByRole("button", { name: "Guardar" }).click();
   await expect(toastMessage(page, "Datos laborales guardados")).toBeVisible();
   await expect(fieldRow(page, "Puesto")).toContainText("Jefe de Almacén");
+
+  await clickUntil(
+    page.getByRole("button", { name: "Editar datos laborales" }),
+    page.getByLabel("Puesto")
+  );
+  await page
+    .getByLabel("Alta del IMSS")
+    .setInputFiles(pdfFile("alta-3.pdf", IMSS_REGISTRATION_TEXT));
+  await expect(page.getByText("Ya subiste alta-3.pdf")).toBeVisible();
+  await page.getByRole("button", { name: "Cancelar" }).click();
+  await clickUntil(
+    page.getByRole("button", { name: "Editar datos laborales" }),
+    page.getByLabel("Puesto")
+  );
+  await expect(page.getByText("Ya subiste alta-3.pdf")).toBeVisible();
+  await page.getByRole("button", { name: "Cancelar" }).click();
 
   await clickUntil(
     page.getByRole("button", { name: "Confirmar datos" }),
