@@ -150,6 +150,9 @@ test("HR corrects the data, confirms the record and reopens it", async ({
   await expect(fieldRow(page, "RFC")).toContainText("Difiere");
 
   await page.getByRole("button", { name: "Editar datos", exact: true }).click();
+  await expect(
+    page.getByRole("dialog").getByLabel("RFC", { exact: true })
+  ).toBeVisible();
   await expect(page.getByLabel("Municipio o alcaldía")).toBeDisabled();
   await expect(page.getByRole("combobox", { name: "Colonia" })).toBeVisible();
   await page.getByLabel("RFC", { exact: true }).fill("123");
@@ -176,6 +179,7 @@ test("HR corrects the data, confirms the record and reopens it", async ({
   await expect(
     page.getByRole("button", { name: "Editar datos", exact: true })
   ).toBeVisible();
+  await expect(page.getByRole("dialog")).toBeHidden();
   await expect(fieldRow(page, "RFC")).toContainText("Coincide");
 
   await page.reload();

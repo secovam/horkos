@@ -142,22 +142,31 @@ function EmployeePage() {
         }
       />
 
-      {editing === "submission" && !confirmed ? (
-        <EmployeeEditForm
-          invitationId={invitationId}
-          values={values}
+      {SECTIONS.map((section) => (
+        <FieldReviewSection
+          key={section}
+          section={section}
           fields={review.fields}
-          onDone={() => setEditing("none")}
         />
-      ) : (
-        SECTIONS.map((section) => (
-          <FieldReviewSection
-            key={section}
-            section={section}
+      ))}
+
+      <Dialog
+        open={editing === "submission" && !confirmed}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditing("none");
+          }
+        }}
+      >
+        <DialogContent size="lg">
+          <EmployeeEditForm
+            invitationId={invitationId}
+            values={values}
             fields={review.fields}
+            onDone={() => setEditing("none")}
           />
-        ))
-      )}
+        </DialogContent>
+      </Dialog>
 
       <EmploymentSection
         values={employmentValues}
