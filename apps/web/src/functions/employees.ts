@@ -2,6 +2,7 @@ import { invitation } from "@horkos/db/schema/invitation";
 import { document, extraction, submission } from "@horkos/db/schema/submission";
 import { createServerFn } from "@tanstack/react-start";
 import { and, count, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
+import { z } from "zod";
 
 import {
   EMPLOYEES_PAGE_SIZE,
@@ -10,7 +11,7 @@ import {
   reviewSubmission,
   toFormValues,
 } from "@/lib/employee-record";
-import { applyPostalCode } from "@/lib/postal-code";
+import { POSTAL_CODE_REGEX, applyPostalCode } from "@/lib/postal-code";
 import { submissionSchema } from "@/lib/submission";
 import { requireSessionMiddleware } from "@/middleware/auth";
 import { getDb } from "@/services";
@@ -136,6 +137,11 @@ export const getEmployee = createServerFn({ method: "POST" })
       review: reviewSubmission(submitted, extractions),
     };
   });
+
+export const findEmployeePostalCode = createServerFn({ method: "POST" })
+  .middleware([requireSessionMiddleware])
+  .validator(z.object({ postalCode: z.string().regex(POSTAL_CODE_REGEX) }))
+  .handler(({ data }) => lookupPostalCode(data.postalCode));
 
 const UNAVAILABLE_RECORD =
   "Este expediente ya fue confirmado o ya no está disponible.";

@@ -135,6 +135,8 @@ test("HR corrects the data, confirms the record and reopens it", async ({
   await expect(fieldRow(page, "RFC")).toContainText("Difiere");
 
   await page.getByRole("button", { name: "Editar datos" }).click();
+  await expect(page.getByLabel("Municipio o alcaldía")).toBeDisabled();
+  await expect(page.getByRole("combobox", { name: "Colonia" })).toBeVisible();
   await page.getByLabel("RFC", { exact: true }).fill("123");
   await page.getByRole("button", { name: "Guardar" }).click();
   await expect(

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { findPostalCode } from "@/functions/employee-invitation";
 import { POSTAL_CODE_REGEX } from "@/lib/postal-code";
+import type { PostalCodeLookup } from "@/lib/postal-code";
 
 type PostalCodeStatus =
   | "incomplete"
@@ -34,14 +34,17 @@ const GUIDANCE = {
   found: {},
 } satisfies Record<PostalCodeStatus, PostalCodeGuidance>;
 
-// Looks up each complete postal code once. Address fields stay locked unless the catalog could
-// not be asked.
-export function usePostalCode(token: string, postalCode: string) {
+// Looks up each complete postal code once, through whichever server function the caller may use.
+// Address fields stay locked unless the catalog could not be asked.
+export function usePostalCode(
+  postalCode: string,
+  find: (postalCode: string) => Promise<PostalCodeLookup>
+) {
   const searchable = POSTAL_CODE_REGEX.test(postalCode);
 
   const { data, isError } = useQuery({
     queryKey: ["postal-code", postalCode],
-    queryFn: () => findPostalCode({ data: { token, postalCode } }),
+    queryFn: () => find(postalCode),
     enabled: searchable,
     staleTime: Number.POSITIVE_INFINITY,
     retry: false,

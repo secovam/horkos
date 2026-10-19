@@ -20,14 +20,17 @@ import {
   SelectValue,
 } from "@horkos/ui/components/select";
 import { toast } from "@horkos/ui/components/toast";
-import { useForm } from "@tanstack/react-form";
+import { useForm, useStore } from "@tanstack/react-form";
 import type { AnyFieldApi } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
+import { useEffect } from "react";
 
 import { FieldProposals } from "@/components/employees/field-proposals";
-import { updateEmployee } from "@/functions/employees";
+import { usePostalCode } from "@/components/submission/use-postal-code";
+import { findEmployeePostalCode, updateEmployee } from "@/functions/employees";
 import type { FieldReview } from "@/lib/employee-record";
+import { matchSuburb } from "@/lib/postal-code";
 import {
   MARITAL_STATUSES,
   MARITAL_STATUS_LIST,
@@ -57,23 +60,37 @@ function isChoice(name: keyof SubmissionInput): name is keyof typeof CHOICES {
   return name === "maritalStatus" || name === "beneficiaryRelationship";
 }
 
+// The postal code owns suburb, municipality and state, as in the employee's form.
+const CATALOG_FIELDS = new Set<keyof SubmissionInput>([
+  "suburb",
+  "city",
+  "state",
+]);
+
 function EditableField({
   review,
   field,
+  items,
+  locked = false,
+  problem,
 }: {
   review: FieldReview;
   field: AnyFieldApi;
+  items?: readonly { value: string; label: string }[];
+  locked?: boolean;
+  problem?: string;
 }) {
-  const invalid = field.state.meta.errors.length > 0;
+  const errors = locked ? [] : field.state.meta.errors;
+  const invalid = problem !== undefined || errors.length > 0;
   const name = review.field;
 
   return (
     <Field data-invalid={invalid}>
       <FieldLabel htmlFor={name}>{SUBMISSION_FIELDS[name].label}</FieldLabel>
-      {isChoice(name) ? (
+      {items ? (
         <Select
           name={name}
-          items={CHOICES[name]}
+          items={items}
           value={field.state.value || null}
           onValueChange={(value) => field.handleChange(value ?? "")}
         >
@@ -85,7 +102,7 @@ function EditableField({
             <SelectValue placeholder="Elige una opción" />
           </SelectTrigger>
           <SelectContent>
-            {CHOICES[name].map((item) => (
+            {items.map((item) => (
               <SelectItem key={item.value} value={item.value}>
                 {item.label}
               </SelectItem>
@@ -98,6 +115,7 @@ function EditableField({
           name={name}
           type="text"
           spellCheck={false}
+          disabled={locked}
           aria-invalid={invalid}
           value={field.state.value}
           onBlur={field.handleBlur}
@@ -107,7 +125,11 @@ function EditableField({
       <div className="text-sm">
         <FieldProposals review={review} />
       </div>
-      <FieldError errors={field.state.meta.errors} />
+      {problem ? (
+        <FieldError>{problem}</FieldError>
+      ) : (
+        <FieldError errors={errors} />
+      )}
     </Field>
   );
 }
@@ -151,6 +173,41 @@ export function EmployeeEditForm({
     onSubmit: ({ value }) => save.mutate(value),
   });
 
+  const suburb = useStore(form.store, (state) => state.values.suburb);
+
+  const postal = usePostalCode(
+    useStore(form.store, (state) => state.values.postalCode.trim()),
+    (postalCode) => findEmployeePostalCode({ data: { postalCode } })
+  );
+
+  const { area } = postal;
+
+  // The server replaces state and municipality with the catalog's, so the form shows them first.
+  useEffect(() => {
+    if (!area) {
+      return;
+    }
+
+    form.setFieldValue("city", area.municipality);
+    form.setFieldValue("state", area.state);
+
+    const listed = matchSuburb(area.suburbs, suburb) ?? "";
+
+    if (listed !== suburb) {
+      form.setFieldValue("suburb", listed);
+    }
+  }, [form, area, suburb]);
+
+  function itemsFor(name: keyof SubmissionInput) {
+    if (isChoice(name)) {
+      return CHOICES[name];
+    }
+
+    return name === "suburb"
+      ? area?.suburbs.map((value) => ({ value, label: value }))
+      : undefined;
+  }
+
   return (
     <form
       className="flex flex-col gap-6"
@@ -173,9 +230,31 @@ export function EmployeeEditForm({
               {fields.flatMap((review) =>
                 SUBMISSION_FIELDS[review.field].section === section
                   ? [
-                      <form.Field key={review.field} name={review.field}>
+                      <form.Field
+                        key={review.field}
+                        name={review.field}
+                        validators={
+                          review.field === "postalCode"
+                            ? { onSubmit: () => postal.blocker }
+                            : undefined
+                        }
+                      >
                         {(field) => (
-                          <EditableField review={review} field={field} />
+                          <EditableField
+                            review={review}
+                            field={field}
+                            items={itemsFor(review.field)}
+                            locked={
+                              postal.locked &&
+                              CATALOG_FIELDS.has(review.field) &&
+                              !(review.field === "suburb" && area)
+                            }
+                            problem={
+                              review.field === "postalCode"
+                                ? postal.problem
+                                : undefined
+                            }
+                          />
                         )}
                       </form.Field>,
                     ]

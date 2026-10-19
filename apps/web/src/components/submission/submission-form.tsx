@@ -36,6 +36,7 @@ import {
 import type { TourAnchor } from "@/components/submission/submission-tour";
 import { usePostalCode } from "@/components/submission/use-postal-code";
 import {
+  findPostalCode,
   submitInvitation,
   uploadDocument,
 } from "@/functions/employee-invitation";
@@ -631,8 +632,8 @@ export function SubmissionForm({
   const suburb = useStore(form.store, (state) => state.values.suburb);
 
   const postal = usePostalCode(
-    token,
-    useStore(form.store, (state) => state.values.postalCode.trim())
+    useStore(form.store, (state) => state.values.postalCode.trim()),
+    (postalCode) => findPostalCode({ data: { token, postalCode } })
   );
 
   const { area } = postal;
