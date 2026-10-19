@@ -6,33 +6,6 @@ import { z } from "zod";
 
 import type { ImssProposals } from "./extraction";
 
-export const OFFICE_LIST = [
-  "Acapulco",
-  "Cancún",
-  "CDMX",
-  "Guadalajara",
-  "Guanajuato",
-  "Matriz",
-  "Monterrey",
-  "Pachuca",
-  "Querétaro",
-  "San Luis",
-  "Tijuana",
-] as const;
-
-export type Office = (typeof OFFICE_LIST)[number];
-
-export const DEFAULT_OFFICE = "Matriz" satisfies Office;
-
-// Only SECOLAM works from several offices; every other company works from Matriz.
-export function hasOffices(company: string) {
-  return company === "SECOLAM";
-}
-
-function isOffice(value: string): value is Office {
-  return OFFICE_LIST.some((office) => office === value);
-}
-
 export const DEPARTMENT_LIST = DEPARTMENT_VALUES;
 
 export type Department = (typeof DEPARTMENT_LIST)[number];
@@ -134,7 +107,7 @@ export function formatHireDate(isoDate: string) {
   return hireDateFormat.format(new Date(`${isoDate}T00:00:00Z`));
 }
 
-const employmentFieldsSchema = z.object({
+export const employmentSchema = z.object({
   workEmail: z
     .string()
     .trim()
@@ -158,7 +131,6 @@ const employmentFieldsSchema = z.object({
   jobTitle: choice(JOB_TITLE_LIST, "Elige el puesto."),
   department: choice(DEPARTMENT_LIST, "Elige el departamento."),
   company: choice(COMPANY_LIST, "Elige la empresa."),
-  office: z.string(),
   nationality: required("Escribe la nacionalidad."),
   sex: choice(SEX_LIST, "Elige el sexo."),
   hireDate: z.string().refine(isHireDate, "Elige una fecha de ingreso válida."),
@@ -166,17 +138,7 @@ const employmentFieldsSchema = z.object({
   dailySalary: dailySalarySchema,
 });
 
-export const EMPLOYMENT_FIELD_NAMES = employmentFieldsSchema.keyof().options;
-
-export const employmentSchema = employmentFieldsSchema
-  .refine(({ company, office }) => !hasOffices(company) || isOffice(office), {
-    path: ["office"],
-    message: "Elige la oficina.",
-  })
-  .transform(({ office, ...fields }) => ({
-    ...fields,
-    office: hasOffices(fields.company) && isOffice(office) ? office : null,
-  }));
+export const EMPLOYMENT_FIELD_NAMES = employmentSchema.keyof().options;
 
 export type EmploymentInput = z.input<typeof employmentSchema>;
 
@@ -188,7 +150,6 @@ export const EMPLOYMENT_FIELDS = {
   jobTitle: { label: "Puesto" },
   department: { label: "Departamento" },
   company: { label: "Empresa" },
-  office: { label: "Oficina" },
   nationality: { label: "Nacionalidad" },
   sex: { label: "Sexo" },
   hireDate: { label: "Fecha de ingreso" },
@@ -200,7 +161,6 @@ export interface StoredEmployment {
   personalEmail: string;
   jobTitle: string;
   department: string;
-  office: string | null;
   company: string;
   nationality: string;
   sex: string;
@@ -237,7 +197,6 @@ export function employmentDefaults(
       personalEmail: saved.personalEmail,
       jobTitle: inList(JOB_TITLE_LIST, saved.jobTitle),
       department: inList(DEPARTMENT_LIST, saved.department),
-      office: saved.office ?? "",
       company: saved.company,
       nationality: saved.nationality,
       sex: saved.sex,
@@ -252,7 +211,6 @@ export function employmentDefaults(
     jobTitle: "",
     department: "",
     company: "",
-    office: "",
     nationality: DEFAULT_NATIONALITY,
     sex: sexFromCurp(curp),
     hireDate: proposals?.hireDate ?? "",

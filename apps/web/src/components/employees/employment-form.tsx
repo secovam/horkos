@@ -51,8 +51,6 @@ import {
   DEPARTMENT_LIST,
   EMPLOYMENT_FIELDS,
   JOB_TITLE_LIST,
-  OFFICE_LIST,
-  hasOffices,
   SEXES,
   SEX_LIST,
   WORK_EMAIL_DOMAIN,
@@ -261,8 +259,6 @@ const DEPARTMENT_ITEMS = DEPARTMENT_LIST.map((value) => ({
   value,
   label: value,
 }));
-
-const OFFICE_ITEMS = OFFICE_LIST.map((value) => ({ value, label: value }));
 
 const COMPANY_ITEMS = COMPANY_LIST.map((value) => ({ value, label: value }));
 
@@ -553,31 +549,11 @@ export function EmploymentForm({
             />
           )}
         </form.Field>
-        <form.Field
-          name="company"
-          listeners={{
-            onChange: () => form.setFieldValue("office", ""),
-          }}
-        >
+        <form.Field name="company">
           {(field) => (
             <SelectField name="company" field={field} items={COMPANY_ITEMS} />
           )}
         </form.Field>
-        <form.Subscribe selector={(state) => hasOffices(state.values.company)}>
-          {(withOffices) =>
-            withOffices ? (
-              <form.Field name="office">
-                {(field) => (
-                  <SelectField
-                    name="office"
-                    field={field}
-                    items={OFFICE_ITEMS}
-                  />
-                )}
-              </form.Field>
-            ) : null
-          }
-        </form.Subscribe>
         <form.Field name="nationality">
           {(field) => <TextField name="nationality" field={field} />}
         </form.Field>

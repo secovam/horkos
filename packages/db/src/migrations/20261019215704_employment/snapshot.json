@@ -1,7 +1,7 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "22811ffb-8261-401f-a4ad-4c6aacfb57ad",
+  "id": "8f4dffab-8a23-4ea6-85db-0f107b676148",
   "prevIds": [
     "4d1adfda-d8ba-45d6-a40f-938f75805f70"
   ],
@@ -869,16 +869,6 @@
       "default": null,
       "generated": null,
       "name": "department",
-      "entityType": "columns",
-      "table": "employment"
-    },
-    {
-      "type": "text",
-      "notNull": false,
-      "autoincrement": false,
-      "default": null,
-      "generated": null,
-      "name": "office",
       "entityType": "columns",
       "table": "employment"
     },

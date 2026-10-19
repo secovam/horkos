@@ -3,20 +3,6 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { invitation } from "./invitation";
 
-export const OFFICE_VALUES = [
-  "Acapulco",
-  "Cancún",
-  "CDMX",
-  "Guadalajara",
-  "Guanajuato",
-  "Matriz",
-  "Monterrey",
-  "Pachuca",
-  "Querétaro",
-  "San Luis",
-  "Tijuana",
-] as const;
-
 // Kerberos's catalogs, spelling included, so values stay compatible. Sorted for the select lists.
 export const DEPARTMENT_VALUES = [
   "Absorción Atómica",
@@ -202,8 +188,6 @@ export const employment = sqliteTable("employment", {
   personalEmail: text("personal_email").notNull(),
   jobTitle: text("job_title", { enum: JOB_TITLE_VALUES }).notNull(),
   department: text("department", { enum: DEPARTMENT_VALUES }).notNull(),
-  // Only SECOLAM has offices to choose from; every other company works from Matriz.
-  office: text("office", { enum: OFFICE_VALUES }),
   company: text("company", { enum: COMPANY_VALUES }).notNull(),
   nationality: text("nationality").notNull(),
   sex: text("sex", { enum: SEX_VALUES }).notNull(),
