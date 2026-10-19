@@ -1,11 +1,10 @@
 import { invitation } from "@horkos/db/schema/invitation";
 import { createServerFn } from "@tanstack/react-start";
-import { and, desc, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import {
   INVITATIONS_PAGE_SIZE,
-  escapeLikePattern,
   generateInvitationToken,
   hashInvitationToken,
   listInvitationsSchema,
@@ -15,26 +14,12 @@ import { countInvitationMetrics } from "@/lib/invitation-metrics";
 import { requireSessionMiddleware } from "@/middleware/auth";
 import { getDb } from "@/services";
 import { deliverInvitation } from "@/services/invitation-delivery";
+import { searchFilter } from "@/services/invitation-search";
 
 const TAB_FILTER = {
   active: isNull(invitation.revokedAt),
   revoked: isNotNull(invitation.revokedAt),
 };
-
-function searchFilter(q: string) {
-  const term = q.trim();
-
-  if (!term) {
-    return;
-  }
-
-  const pattern = `%${escapeLikePattern(term)}%`;
-
-  return or(
-    sql`${invitation.employeeName} like ${pattern} escape '\\'`,
-    sql`${invitation.email} like ${pattern} escape '\\'`
-  );
-}
 
 async function emailInvitation(
   token: string,

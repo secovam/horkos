@@ -4,11 +4,13 @@ import type { ReactNode } from "react";
 export function PageHeader({
   icon: Icon,
   title,
+  badge,
   description,
   actions,
 }: {
   icon: LucideIcon;
   title: string;
+  badge?: ReactNode;
   description: string;
   actions?: ReactNode;
 }) {
@@ -20,7 +22,10 @@ export function PageHeader({
             <Icon className="size-5" />
           </span>
           <div>
-            <h1 className="text-primary text-xl font-bold">{title}</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-primary text-xl font-bold">{title}</h1>
+              {badge}
+            </div>
             <p className="text-sidebar-primary mt-1 text-sm">{description}</p>
           </div>
         </div>

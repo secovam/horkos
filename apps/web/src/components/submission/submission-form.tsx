@@ -36,6 +36,7 @@ import {
 import type { TourAnchor } from "@/components/submission/submission-tour";
 import { usePostalCode } from "@/components/submission/use-postal-code";
 import {
+  findPostalCode,
   submitInvitation,
   uploadDocument,
 } from "@/functions/employee-invitation";
@@ -59,6 +60,7 @@ import {
   MARITAL_STATUS_LIST,
   RELATIONSHIPS,
   RELATIONSHIP_LIST,
+  SUBMISSION_FIELDS,
   documentFileSchema,
 } from "@/lib/submission";
 import type { DocumentKind, SubmissionInput } from "@/lib/submission";
@@ -69,7 +71,6 @@ type TextFieldName = Exclude<keyof SubmissionInput, ChoiceFieldName>;
 
 interface TextFieldConfig {
   name: TextFieldName;
-  label: string;
   autoComplete: string;
   inputMode?: ComponentProps<"input">["inputMode"];
   autoCapitalize?: string;
@@ -78,7 +79,6 @@ interface TextFieldConfig {
 
 interface ChoiceFieldConfig {
   name: ChoiceFieldName;
-  label: string;
   items: readonly { value: string; label: string }[];
 }
 
@@ -92,33 +92,28 @@ function choiceItems<T extends string>(
 const PERSONAL_FIELDS: readonly TextFieldConfig[] = [
   {
     name: "fullName",
-    label: "Nombre completo",
     autoComplete: "name",
   },
   {
     name: "rfc",
-    label: "RFC",
     autoComplete: "off",
     autoCapitalize: "characters",
     maxLength: 13,
   },
   {
     name: "curp",
-    label: "CURP",
     autoComplete: "off",
     autoCapitalize: "characters",
     maxLength: 18,
   },
   {
     name: "nss",
-    label: "Número de seguridad social (NSS)",
     autoComplete: "off",
     inputMode: "numeric",
     maxLength: 11,
   },
   {
     name: "phone",
-    label: "Teléfono",
     autoComplete: "tel-national",
     inputMode: "tel",
     maxLength: 14,
@@ -128,24 +123,20 @@ const PERSONAL_FIELDS: readonly TextFieldConfig[] = [
 const ADDRESS_FIELDS: readonly TextFieldConfig[] = [
   {
     name: "street",
-    label: "Calle",
     autoComplete: "address-line1",
   },
   {
     name: "extNumber",
-    label: "Número exterior",
     autoComplete: "off",
   },
   {
     name: "intNumber",
-    label: "Número interior (opcional)",
     autoComplete: "off",
   },
 ];
 
 const POSTAL_CODE_FIELD = {
   name: "postalCode",
-  label: "Código postal",
   autoComplete: "postal-code",
   inputMode: "numeric",
   maxLength: 5,
@@ -153,26 +144,22 @@ const POSTAL_CODE_FIELD = {
 
 const SUBURB_FIELD = {
   name: "suburb",
-  label: "Colonia",
   autoComplete: "address-level3",
 } satisfies TextFieldConfig;
 
 const CITY_FIELD = {
   name: "city",
-  label: "Municipio o alcaldía",
   autoComplete: "address-level2",
 } satisfies TextFieldConfig;
 
 const STATE_FIELD = {
   name: "state",
-  label: "Estado",
   autoComplete: "address-level1",
 } satisfies TextFieldConfig;
 
 const BENEFICIARY_FIELDS: readonly TextFieldConfig[] = [
   {
     name: "beneficiaryName",
-    label: "Nombre del beneficiario",
     autoComplete: "off",
   },
 ];
@@ -180,7 +167,6 @@ const BENEFICIARY_FIELDS: readonly TextFieldConfig[] = [
 const PERSONAL_CHOICES: readonly ChoiceFieldConfig[] = [
   {
     name: "maritalStatus",
-    label: "Estado civil",
     items: choiceItems(MARITAL_STATUS_LIST, MARITAL_STATUSES),
   },
 ];
@@ -188,7 +174,6 @@ const PERSONAL_CHOICES: readonly ChoiceFieldConfig[] = [
 const BENEFICIARY_CHOICES: readonly ChoiceFieldConfig[] = [
   {
     name: "beneficiaryRelationship",
-    label: "Parentesco",
     items: choiceItems(RELATIONSHIP_LIST, RELATIONSHIPS),
   },
 ];
@@ -269,6 +254,7 @@ function TextInputField({
   problem,
   description,
 }: Omit<TextFieldConfig, "name"> & {
+  label: string;
   field: AnyFieldApi;
   extracted?: string;
   onEdit: (name: TextFieldName) => void;
@@ -328,6 +314,7 @@ function ChoiceField({
   items,
   onEdit,
 }: Omit<ChoiceFieldConfig, "name"> & {
+  label: string;
   field: AnyFieldApi;
   onEdit?: (name: TextFieldName) => void;
 }) {
@@ -645,8 +632,8 @@ export function SubmissionForm({
   const suburb = useStore(form.store, (state) => state.values.suburb);
 
   const postal = usePostalCode(
-    token,
-    useStore(form.store, (state) => state.values.postalCode.trim())
+    useStore(form.store, (state) => state.values.postalCode.trim()),
+    (postalCode) => findPostalCode({ data: { token, postalCode } })
   );
 
   const { area } = postal;
@@ -691,6 +678,7 @@ export function SubmissionForm({
         {(field) => (
           <TextInputField
             field={field}
+            label={SUBMISSION_FIELDS[name].label}
             extracted={proposed[name]}
             onEdit={markEdited}
             locked={locked}
@@ -713,6 +701,7 @@ export function SubmissionForm({
           {(field) => (
             <TextInputField
               field={field}
+              label={SUBMISSION_FIELDS.postalCode.label}
               extracted={proposed.postalCode}
               onEdit={markEdited}
               problem={postal.problem}
@@ -726,7 +715,7 @@ export function SubmissionForm({
             {(field) => (
               <ChoiceField
                 field={field}
-                label={SUBURB_FIELD.label}
+                label={SUBMISSION_FIELDS.suburb.label}
                 items={area.suburbs.map((name) => ({
                   value: name,
                   label: name,
@@ -748,7 +737,13 @@ export function SubmissionForm({
   function renderChoiceField({ name, ...config }: ChoiceFieldConfig) {
     return (
       <form.Field key={name} name={name}>
-        {(field) => <ChoiceField field={field} {...config} />}
+        {(field) => (
+          <ChoiceField
+            field={field}
+            label={SUBMISSION_FIELDS[name].label}
+            {...config}
+          />
+        )}
       </form.Field>
     );
   }
