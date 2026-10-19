@@ -1,11 +1,4 @@
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@horkos/ui/components/card";
-
-import {
   EMPLOYMENT_FIELDS,
   SEXES,
   SEX_LIST,
@@ -50,35 +43,26 @@ export function EmploymentSection({
   complete: boolean;
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          <h2 className="text-primary">Datos laborales</h2>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {complete ? (
-          <dl className="divide-y">
-            {NAMES.map((name) => (
-              <div
-                key={name}
-                className="grid gap-1 py-3 sm:grid-cols-3 sm:gap-4"
-              >
-                <dt className="text-sidebar-primary text-sm font-medium">
-                  {EMPLOYMENT_FIELDS[name].label}
-                </dt>
-                <dd className="sm:col-span-2">
-                  {displayEmployment(name, values)}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        ) : (
-          <p className="text-muted-foreground">
-            RH aún no completa los datos laborales
-          </p>
-        )}
-      </CardContent>
-    </Card>
+    <section className="grid gap-3 border-t pt-10 first-of-type:border-t-0 first-of-type:pt-0">
+      <h2 className="text-primary text-lg font-semibold">Datos laborales</h2>
+      {complete ? (
+        <dl className="divide-border/50 divide-y">
+          {NAMES.map((name) => (
+            <div key={name} className="grid gap-1 py-3 sm:grid-cols-3 sm:gap-4">
+              <dt className="text-sidebar-primary text-sm font-medium">
+                {EMPLOYMENT_FIELDS[name].label}
+              </dt>
+              <dd className="sm:col-span-2">
+                {displayEmployment(name, values)}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <p className="text-muted-foreground">
+          RH aún no completa los datos laborales
+        </p>
+      )}
+    </section>
   );
 }

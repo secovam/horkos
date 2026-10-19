@@ -69,7 +69,7 @@ test("HR reviews a submitted employee and opens their document", async ({
   });
 
   const documents = page
-    .locator("[data-slot=card]")
+    .locator("section")
     .filter({ has: page.getByRole("heading", { name: "Documentos" }) });
 
   await expect(

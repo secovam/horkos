@@ -1,10 +1,4 @@
 import { Badge } from "@horkos/ui/components/badge";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@horkos/ui/components/card";
 
 import { FieldProposals } from "@/components/employees/field-proposals";
 import { displayValue } from "@/lib/employee-record";
@@ -57,21 +51,15 @@ export function FieldReviewSection({
   const title = SUBMISSION_SECTIONS[section];
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          <h2 className="text-primary">{title}</h2>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <dl className="divide-y">
-          {fields.flatMap((review) =>
-            SUBMISSION_FIELDS[review.field].section === section
-              ? [<FieldRow key={review.field} review={review} />]
-              : []
-          )}
-        </dl>
-      </CardContent>
-    </Card>
+    <section className="grid gap-3 border-t pt-10 first-of-type:border-t-0 first-of-type:pt-0">
+      <h2 className="text-primary text-lg font-semibold">{title}</h2>
+      <dl className="divide-border/50 divide-y">
+        {fields.flatMap((review) =>
+          SUBMISSION_FIELDS[review.field].section === section
+            ? [<FieldRow key={review.field} review={review} />]
+            : []
+        )}
+      </dl>
+    </section>
   );
 }
