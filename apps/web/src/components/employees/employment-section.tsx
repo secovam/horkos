@@ -12,6 +12,8 @@ import {
   EMPLOYMENT_FIELD_NAMES,
   formatHireDate,
   formatSalary,
+  DEFAULT_OFFICE,
+  hasOffices,
 } from "@/lib/employment";
 import type { EmploymentInput } from "@/lib/employment";
 
@@ -35,6 +37,10 @@ function displayEmployment(
 
   if (name === "dailySalary") {
     return formatSalary(value);
+  }
+
+  if (name === "office" && !hasOffices(values.company)) {
+    return DEFAULT_OFFICE;
   }
 
   return value || "—";

@@ -51,7 +51,6 @@ import {
   DEPARTMENT_LIST,
   EMPLOYMENT_FIELDS,
   JOB_TITLE_LIST,
-  DEFAULT_OFFICE,
   OFFICE_LIST,
   hasOffices,
   SEXES,
@@ -557,11 +556,7 @@ export function EmploymentForm({
         <form.Field
           name="company"
           listeners={{
-            onChange: ({ value }) =>
-              form.setFieldValue(
-                "office",
-                hasOffices(value) ? "" : DEFAULT_OFFICE
-              ),
+            onChange: () => form.setFieldValue("office", ""),
           }}
         >
           {(field) => (

@@ -17,7 +17,7 @@ const valid = {
 
 describe("employmentSchema", () => {
   test("keeps the chosen office only for SECOLAM", () => {
-    expect(employmentSchema.parse(valid).office).toBe("Matriz");
+    expect(employmentSchema.parse(valid).office).toBeNull();
     expect(
       employmentSchema.parse({ ...valid, company: "SECOLAM" }).office
     ).toBe("CDMX");
@@ -27,6 +27,13 @@ describe("employmentSchema", () => {
     expect(
       employmentSchema.safeParse({ ...valid, company: "SECOLAM", office: "" })
         .success
+    ).toBe(false);
+    expect(
+      employmentSchema.safeParse({
+        ...valid,
+        company: "SECOLAM",
+        office: "Marte",
+      }).success
     ).toBe(false);
   });
 
@@ -48,7 +55,6 @@ describe("employmentSchema", () => {
     ["department", ""],
     ["department", "Cocina"],
     ["department", "Ventas"],
-    ["office", "Marte"],
     ["company", ""],
     ["company", "OTRA"],
     ["company", ["SERALAM"]],
@@ -130,7 +136,7 @@ describe("employmentDefaults", () => {
       jobTitle: "",
       department: "",
       company: "",
-      office: "Matriz",
+      office: "",
       nationality: "Mexicana",
       sex: "male",
       hireDate: "",

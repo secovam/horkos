@@ -29,6 +29,10 @@ export function hasOffices(company: string) {
   return company === "SECOLAM";
 }
 
+function isOffice(value: string): value is Office {
+  return OFFICE_LIST.some((office) => office === value);
+}
+
 export const DEPARTMENT_LIST = DEPARTMENT_VALUES;
 
 export type Department = (typeof DEPARTMENT_LIST)[number];
@@ -154,7 +158,7 @@ const employmentFieldsSchema = z.object({
   jobTitle: choice(JOB_TITLE_LIST, "Elige el puesto."),
   department: choice(DEPARTMENT_LIST, "Elige el departamento."),
   company: choice(COMPANY_LIST, "Elige la empresa."),
-  office: choice(OFFICE_LIST, "Elige la oficina."),
+  office: z.string(),
   nationality: required("Escribe la nacionalidad."),
   sex: choice(SEX_LIST, "Elige el sexo."),
   hireDate: z.string().refine(isHireDate, "Elige una fecha de ingreso válida."),
@@ -164,10 +168,15 @@ const employmentFieldsSchema = z.object({
 
 export const EMPLOYMENT_FIELD_NAMES = employmentFieldsSchema.keyof().options;
 
-export const employmentSchema = employmentFieldsSchema.transform((fields) => ({
-  ...fields,
-  office: hasOffices(fields.company) ? fields.office : DEFAULT_OFFICE,
-}));
+export const employmentSchema = employmentFieldsSchema
+  .refine(({ company, office }) => !hasOffices(company) || isOffice(office), {
+    path: ["office"],
+    message: "Elige la oficina.",
+  })
+  .transform(({ office, ...fields }) => ({
+    ...fields,
+    office: hasOffices(fields.company) && isOffice(office) ? office : null,
+  }));
 
 export type EmploymentInput = z.input<typeof employmentSchema>;
 
@@ -191,7 +200,7 @@ export interface StoredEmployment {
   personalEmail: string;
   jobTitle: string;
   department: string;
-  office: string;
+  office: string | null;
   company: string;
   nationality: string;
   sex: string;
@@ -228,7 +237,7 @@ export function employmentDefaults(
       personalEmail: saved.personalEmail,
       jobTitle: inList(JOB_TITLE_LIST, saved.jobTitle),
       department: inList(DEPARTMENT_LIST, saved.department),
-      office: saved.office,
+      office: saved.office ?? "",
       company: saved.company,
       nationality: saved.nationality,
       sex: saved.sex,
@@ -243,7 +252,7 @@ export function employmentDefaults(
     jobTitle: "",
     department: "",
     company: "",
-    office: DEFAULT_OFFICE,
+    office: "",
     nationality: DEFAULT_NATIONALITY,
     sex: sexFromCurp(curp),
     hireDate: proposals?.hireDate ?? "",
