@@ -226,6 +226,7 @@ export const reopenEmployee = createServerFn({ method: "POST" })
       .where(
         and(
           eq(invitation.id, invitationId),
+          SUBMITTED_AND_ACTIVE,
           isNotNull(invitation.hrCompletedAt),
           isNull(invitation.contractGeneratedAt)
         )
