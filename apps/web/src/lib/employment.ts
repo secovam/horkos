@@ -1,4 +1,8 @@
-import { JOB_TITLE_VALUES } from "@horkos/db/schema/employment";
+import {
+  COMPANY_VALUES,
+  JOB_TITLE_VALUES,
+  SEX_VALUES,
+} from "@horkos/db/schema/employment";
 import { z } from "zod";
 
 import type { ImssProposals } from "./extraction";
@@ -7,16 +11,11 @@ export const JOB_TITLE_LIST = JOB_TITLE_VALUES;
 
 export type JobTitle = (typeof JOB_TITLE_LIST)[number];
 
-export const COMPANY_LIST = [
-  "SERALAM",
-  "SECOVAM",
-  "LABAIND",
-  "SECOLAM",
-] as const;
+export const COMPANY_LIST = COMPANY_VALUES;
 
 export type Company = (typeof COMPANY_LIST)[number];
 
-export const SEX_LIST = ["male", "female"] as const;
+export const SEX_LIST = SEX_VALUES;
 
 export type Sex = (typeof SEX_LIST)[number];
 
