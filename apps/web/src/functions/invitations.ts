@@ -11,6 +11,7 @@ import {
   newInvitationSchema,
 } from "@/lib/invitation";
 import { countInvitationMetrics } from "@/lib/invitation-metrics";
+import { PublicError } from "@/lib/public-error";
 import { requireSessionMiddleware } from "@/middleware/auth";
 import { getDb } from "@/services";
 import { deliverInvitation } from "@/services/invitation-delivery";
@@ -28,7 +29,7 @@ async function emailInvitation(
   try {
     await deliverInvitation(token, { email, employeeName });
   } catch {
-    throw new Error(
+    throw new PublicError(
       "La invitación se guardó, pero no se pudo enviar el correo. Intenta reenviarla."
     );
   }
@@ -91,13 +92,15 @@ export const createInvitation = createServerFn({ method: "POST" })
     });
 
     if (existing?.revokedAt) {
-      throw new Error(
+      throw new PublicError(
         "Este correo tiene una invitación revocada. Reactívala desde la pestaña Revocadas."
       );
     }
 
     if (existing) {
-      throw new Error("Ya existe una invitación activa para este correo.");
+      throw new PublicError(
+        "Ya existe una invitación activa para este correo."
+      );
     }
 
     const token = generateInvitationToken();
@@ -135,7 +138,7 @@ export const resendInvitation = createServerFn({ method: "POST" })
       .where(and(eq(invitation.id, data.id), isNull(invitation.revokedAt)));
 
     if (!active) {
-      throw new Error("Solo se pueden reenviar invitaciones activas.");
+      throw new PublicError("Solo se pueden reenviar invitaciones activas.");
     }
 
     // Swapping the hash only while it still matches what we read makes concurrent resends
@@ -157,7 +160,7 @@ export const resendInvitation = createServerFn({ method: "POST" })
       .returning({ id: invitation.id });
 
     if (!swapped) {
-      throw new Error(
+      throw new PublicError(
         "La invitación cambió mientras se reenviaba. Intenta de nuevo."
       );
     }
@@ -200,7 +203,7 @@ export const reactivateInvitation = createServerFn({ method: "POST" })
       .where(and(eq(invitation.id, data.id), isNotNull(invitation.revokedAt)));
 
     if (!revoked) {
-      throw new Error("La invitación ya estaba activa.");
+      throw new PublicError("La invitación ya estaba activa.");
     }
 
     // The revoked link may have leaked, so reactivating always issues a new one.
@@ -214,7 +217,7 @@ export const reactivateInvitation = createServerFn({ method: "POST" })
       .returning({ id: invitation.id });
 
     if (!reactivated) {
-      throw new Error(
+      throw new PublicError(
         "La invitación cambió mientras se reactivaba. Intenta de nuevo."
       );
     }
@@ -235,7 +238,7 @@ export const reactivateInvitation = createServerFn({ method: "POST" })
           and(eq(invitation.id, data.id), eq(invitation.tokenHash, tokenHash))
         );
 
-      throw new Error(
+      throw new PublicError(
         "No se pudo enviar el correo, así que la invitación sigue revocada."
       );
     }
@@ -252,6 +255,6 @@ export const revokeInvitation = createServerFn({ method: "POST" })
       .returning({ id: invitation.id });
 
     if (!revoked) {
-      throw new Error("La invitación ya estaba revocada.");
+      throw new PublicError("La invitación ya estaba revocada.");
     }
   });

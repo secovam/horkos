@@ -5,20 +5,21 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { z } from "zod";
 
-import { ENV } from "@/env.server";
 import type { UploadedDocuments } from "@/lib/document-upload";
 import { FAILED_EXTRACTION } from "@/lib/extraction";
 import { hashInvitationToken } from "@/lib/invitation";
 import { POSTAL_CODE_REGEX, applyPostalCode } from "@/lib/postal-code";
+import { PublicError } from "@/lib/public-error";
 import {
   DOCUMENT_KINDS,
   DOCUMENT_KIND_LIST,
-  detectDocumentType,
-  documentFileSchema,
   employeeObjectKey,
+  isEmployeeDocumentKind,
+  parseDocumentFile,
   submissionSchema,
 } from "@/lib/submission";
 import { getDb } from "@/services";
+import { storeDocument } from "@/services/document-storage";
 import { extractDocument } from "@/services/extractor";
 import { lookupPostalCode } from "@/services/sepomex";
 
@@ -60,6 +61,11 @@ async function uploadedDocuments(invitationId: string) {
   const uploaded: UploadedDocuments = {};
 
   for (const { kind, fileName } of documents) {
+    // HR's own documents never reach the employee.
+    if (!isEmployeeDocumentKind(kind)) {
+      continue;
+    }
+
     uploaded[kind] = {
       fileName,
       extraction: extractionByKind.get(kind) ?? FAILED_EXTRACTION,
@@ -118,7 +124,7 @@ async function findOpenInvitation(token: string) {
     .limit(1);
 
   if (!found || found.submittedAt) {
-    throw new Error(UNAVAILABLE_MESSAGE);
+    throw new PublicError(UNAVAILABLE_MESSAGE);
   }
 
   return found;
@@ -129,20 +135,18 @@ function parseUploadForm(form: FormData) {
   const kind = z.enum(DOCUMENT_KIND_LIST).safeParse(form.get("kind"));
 
   if (!token.success || !kind.success) {
-    throw new Error("Revisa los datos e inténtalo de nuevo.");
+    throw new PublicError("Revisa los datos e inténtalo de nuevo.");
   }
 
-  const file = documentFileSchema.safeParse(form.get("file"));
-
-  if (!file.success) {
-    throw new Error(file.error.issues[0].message);
-  }
-
-  return { token: token.data, kind: kind.data, file: file.data };
+  return {
+    token: token.data,
+    kind: kind.data,
+    file: parseDocumentFile(form.get("file")),
+  };
 }
 
 // Runs as soon as the employee picks a file, so the form can be prefilled while they keep going.
-// Uploading again replaces the document: a new R2 object, the same rows, and the old object deleted.
+// Uploading again replaces the document.
 export const uploadDocument = createServerFn({ method: "POST" })
   .validator(parseUploadForm)
   .handler(async ({ data: { token, kind, file } }) => {
@@ -151,73 +155,16 @@ export const uploadDocument = createServerFn({ method: "POST" })
       file.arrayBuffer(),
     ]);
 
-    const contentType = detectDocumentType(new Uint8Array(bytes.slice(0, 8)));
-
-    if (!contentType) {
-      throw new Error("Sube un archivo PDF.");
-    }
-
-    const objectKey = employeeObjectKey(found.id, kind, crypto.randomUUID());
-
-    await ENV.DOCUMENTS.put(objectKey, bytes, {
-      httpMetadata: { contentType },
+    const result = await storeDocument({
+      invitationId: found.id,
+      kind,
+      objectKey: employeeObjectKey(found.id, kind, crypto.randomUUID()),
+      file,
+      bytes,
+      read: (content) => extractDocument(kind, content),
     });
 
-    let replaced: string | undefined;
-
-    try {
-      const result = await extractDocument(kind, bytes);
-      const db = getDb();
-
-      // Together, so a document is never listed with the extraction of the one it replaced,
-      // and each upload learns exactly which object it displaced.
-      const [previous] = await db.batch([
-        db
-          .select({ objectKey: document.objectKey })
-          .from(document)
-          .where(
-            and(eq(document.invitationId, found.id), eq(document.kind, kind))
-          ),
-        db
-          .insert(document)
-          .values({
-            invitationId: found.id,
-            kind,
-            objectKey,
-            fileName: file.name,
-            contentType,
-            size: file.size,
-          })
-          .onConflictDoUpdate({
-            target: [document.invitationId, document.kind],
-            set: {
-              objectKey,
-              fileName: file.name,
-              contentType,
-              size: file.size,
-              uploadedAt: new Date(),
-            },
-          }),
-        db
-          .insert(extraction)
-          .values({ invitationId: found.id, kind, ...result })
-          .onConflictDoUpdate({
-            target: [extraction.invitationId, extraction.kind],
-            set: { ...result, extractedAt: new Date() },
-          }),
-      ]);
-
-      replaced = previous[0]?.objectKey;
-
-      return { fileName: file.name, extraction: result };
-    } catch (error) {
-      await ENV.DOCUMENTS.delete(objectKey);
-      throw error;
-    } finally {
-      if (replaced) {
-        await ENV.DOCUMENTS.delete(replaced);
-      }
-    }
+    return { fileName: file.name, extraction: result };
   });
 
 // Behind the token so the endpoint is not an open proxy to the catalog.
@@ -245,7 +192,7 @@ function parseSubmissionForm(form: FormData) {
 
   if (!token.success || !fields.success) {
     // Messages come from the schema and never echo the submitted values.
-    throw new Error(
+    throw new PublicError(
       fields.error?.issues[0]?.message ??
         "Revisa los datos e inténtalo de nuevo."
     );
@@ -277,7 +224,7 @@ export const submitInvitation = createServerFn({ method: "POST" })
     );
 
     if (!checked.ok) {
-      throw new Error(checked.message);
+      throw new PublicError(checked.message);
     }
 
     const { fields } = checked;
@@ -292,7 +239,9 @@ export const submitInvitation = createServerFn({ method: "POST" })
     );
 
     if (missing) {
-      throw new Error(`Sube tu documento: ${DOCUMENT_KINDS[missing].label}.`);
+      throw new PublicError(
+        `Sube tu documento: ${DOCUMENT_KINDS[missing].label}.`
+      );
     }
 
     // Both statements check the invitation is still open, so a revocation or a second

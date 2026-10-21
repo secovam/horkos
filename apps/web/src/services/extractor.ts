@@ -6,8 +6,12 @@ import {
   FAILED_EXTRACTION,
   UNREADABLE_EXTRACTION,
   parseDocument,
+  parseImssRegistration,
 } from "@/lib/extraction";
-import type { ExtractionResult } from "@/lib/extraction";
+import type {
+  ExtractionResult,
+  ImssRegistrationResult,
+} from "@/lib/extraction";
 import type { DocumentKind } from "@/lib/submission";
 
 // Matches `maxInstances` in alchemy.run.ts.
@@ -51,23 +55,51 @@ async function readTextOnceMore(bytes: ArrayBuffer) {
   }
 }
 
-// A container failure must never fail the upload: the employee types by hand instead.
+type TextRead =
+  | { status: "extracted"; text: string }
+  | { status: "failed" | "unreadable" };
+
+// A container failure must never fail the upload: the person types by hand instead.
 // Nothing here is logged, since errors and text can quote personal data.
-export async function extractDocument(
-  kind: DocumentKind,
-  bytes: ArrayBuffer
-): Promise<ExtractionResult> {
+async function readDocumentText(bytes: ArrayBuffer): Promise<TextRead> {
   let text: string | null;
 
   try {
     text = await readTextOnceMore(bytes);
   } catch {
-    return FAILED_EXTRACTION;
+    return { status: "failed" };
   }
 
-  if (!text?.trim()) {
-    return UNREADABLE_EXTRACTION;
+  return text?.trim()
+    ? { status: "extracted", text }
+    : { status: "unreadable" };
+}
+
+export async function extractDocument(
+  kind: DocumentKind,
+  bytes: ArrayBuffer
+): Promise<ExtractionResult> {
+  const read = await readDocumentText(bytes);
+
+  if (read.status === "extracted") {
+    return { status: "extracted", ...parseDocument(kind, read.text) };
   }
 
-  return { status: "extracted", ...parseDocument(kind, text) };
+  return read.status === "failed" ? FAILED_EXTRACTION : UNREADABLE_EXTRACTION;
+}
+
+export async function extractImssRegistration(
+  bytes: ArrayBuffer
+): Promise<ImssRegistrationResult> {
+  const read = await readDocumentText(bytes);
+
+  if (read.status === "extracted") {
+    return {
+      status: "extracted",
+      fields: parseImssRegistration(read.text),
+      warnings: [],
+    };
+  }
+
+  return read.status === "failed" ? FAILED_EXTRACTION : UNREADABLE_EXTRACTION;
 }

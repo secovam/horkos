@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { PublicError } from "./public-error";
+
 export const DOCUMENT_KIND_LIST = [
   "tax_status",
   "imss",
@@ -14,18 +16,53 @@ export const DOCUMENT_KINDS = {
   proof_of_address: { label: "Comprobante de domicilio (Telmex o CFE)" },
 } satisfies Record<DocumentKind, { label: string }>;
 
+// Documents HR uploads for an employee, who never sees them.
+export const HR_DOCUMENT_KIND_LIST = ["imss_registration"] as const;
+
+export type HrDocumentKind = (typeof HR_DOCUMENT_KIND_LIST)[number];
+
+export const HR_DOCUMENT_KINDS = {
+  imss_registration: { label: "Alta del IMSS" },
+} satisfies Record<HrDocumentKind, { label: string }>;
+
+export const STORED_DOCUMENT_KIND_LIST = [
+  ...DOCUMENT_KIND_LIST,
+  ...HR_DOCUMENT_KIND_LIST,
+] as const;
+
+export type StoredDocumentKind = (typeof STORED_DOCUMENT_KIND_LIST)[number];
+
+export const STORED_DOCUMENT_KINDS = {
+  ...DOCUMENT_KINDS,
+  ...HR_DOCUMENT_KINDS,
+} satisfies Record<StoredDocumentKind, { label: string }>;
+
+export function isEmployeeDocumentKind(
+  kind: StoredDocumentKind
+): kind is DocumentKind {
+  return DOCUMENT_KIND_LIST.some((item) => item === kind);
+}
+
 export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 
 export const DOCUMENT_ACCEPT = "application/pdf";
 
-// One key per upload, so concurrent replacements never share bytes. The bucket also
-// holds HR uploads later, under `invitations/{id}/hr/`.
+// One key per upload, so concurrent replacements never share bytes. HR uploads live
+// apart, under `invitations/{id}/hr/`.
 export function employeeObjectKey(
   invitationId: string,
   kind: DocumentKind,
   uploadId: string
 ) {
   return `invitations/${invitationId}/employee/${kind}/${uploadId}`;
+}
+
+export function hrObjectKey(
+  invitationId: string,
+  kind: HrDocumentKind,
+  uploadId: string
+) {
+  return `invitations/${invitationId}/hr/${kind}/${uploadId}`;
 }
 
 const PDF_SIGNATURE = [0x25, 0x50, 0x44, 0x46] as const;
@@ -46,6 +83,16 @@ export const documentFileSchema = z
     (file) => file.size <= MAX_DOCUMENT_BYTES,
     "El archivo pesa más de 10 MB."
   );
+
+export function parseDocumentFile(value: FormDataEntryValue | null) {
+  const file = documentFileSchema.safeParse(value);
+
+  if (!file.success) {
+    throw new PublicError(file.error.issues[0].message);
+  }
+
+  return file.data;
+}
 
 export const MARITAL_STATUS_LIST = ["single", "married", "common_law"] as const;
 

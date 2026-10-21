@@ -1,15 +1,18 @@
+import { Alert, AlertDescription } from "@horkos/ui/components/alert";
 import { Button } from "@horkos/ui/components/button";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@horkos/ui/components/card";
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@horkos/ui/components/dialog";
 import {
   Field,
   FieldError,
   FieldGroup,
   FieldLabel,
+  FieldLegend,
+  FieldSet,
 } from "@horkos/ui/components/field";
 import { Input } from "@horkos/ui/components/input";
 import {
@@ -24,7 +27,7 @@ import { useForm, useStore } from "@tanstack/react-form";
 import type { AnyFieldApi } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { FieldProposals } from "@/components/employees/field-proposals";
 import { usePostalCode } from "@/components/submission/use-postal-code";
@@ -159,15 +162,16 @@ export function EmployeeEditForm({
       ]);
       onDone();
     },
-    onError: (error) => toast.error(error.message),
   });
+
+  const formRef = useRef<HTMLFormElement>(null);
 
   const form = useForm({
     defaultValues: values,
     validators: { onSubmit: submissionSchema },
     onSubmitInvalid: () => {
-      document
-        .querySelector<HTMLElement>('main [aria-invalid="true"]')
+      formRef.current
+        ?.querySelector<HTMLElement>('[aria-invalid="true"]')
         ?.focus();
     },
     onSubmit: ({ value }) => save.mutate(value),
@@ -210,7 +214,8 @@ export function EmployeeEditForm({
 
   return (
     <form
-      className="flex flex-col gap-6"
+      ref={formRef}
+      className="grid gap-4"
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
@@ -218,54 +223,61 @@ export function EmployeeEditForm({
         form.handleSubmit();
       }}
     >
+      <DialogHeader>
+        <DialogTitle>Datos del empleado</DialogTitle>
+        <DialogDescription>
+          Corrige lo que el empleado envió. Debajo de cada campo ves lo que
+          leímos de sus documentos.
+        </DialogDescription>
+      </DialogHeader>
       {SECTIONS.map((section) => (
-        <Card key={section}>
-          <CardHeader>
-            <CardTitle>
-              <h2 className="text-primary">{SUBMISSION_SECTIONS[section]}</h2>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <FieldGroup>
-              {fields.flatMap((review) =>
-                SUBMISSION_FIELDS[review.field].section === section
-                  ? [
-                      <form.Field
-                        key={review.field}
-                        name={review.field}
-                        validators={
-                          review.field === "postalCode"
-                            ? { onSubmit: () => postal.blocker }
-                            : undefined
-                        }
-                      >
-                        {(field) => (
-                          <EditableField
-                            review={review}
-                            field={field}
-                            items={itemsFor(review.field)}
-                            locked={
-                              postal.locked &&
-                              CATALOG_FIELDS.has(review.field) &&
-                              !(review.field === "suburb" && area)
-                            }
-                            problem={
-                              review.field === "postalCode"
-                                ? postal.problem
-                                : undefined
-                            }
-                          />
-                        )}
-                      </form.Field>,
-                    ]
-                  : []
-              )}
-            </FieldGroup>
-          </CardContent>
-        </Card>
+        <FieldSet key={section}>
+          <FieldLegend>{SUBMISSION_SECTIONS[section]}</FieldLegend>
+          <FieldGroup>
+            {fields.flatMap((review) =>
+              SUBMISSION_FIELDS[review.field].section === section
+                ? [
+                    <form.Field
+                      key={review.field}
+                      name={review.field}
+                      validators={
+                        review.field === "postalCode"
+                          ? { onSubmit: () => postal.blocker }
+                          : undefined
+                      }
+                    >
+                      {(field) => (
+                        <EditableField
+                          review={review}
+                          field={field}
+                          items={itemsFor(review.field)}
+                          locked={
+                            postal.locked &&
+                            CATALOG_FIELDS.has(review.field) &&
+                            !(review.field === "suburb" && area)
+                          }
+                          problem={
+                            review.field === "postalCode"
+                              ? postal.problem
+                              : undefined
+                          }
+                        />
+                      )}
+                    </form.Field>,
+                  ]
+                : []
+            )}
+          </FieldGroup>
+        </FieldSet>
       ))}
 
-      <div className="flex justify-end gap-3">
+      {save.error ? (
+        <Alert variant="destructive" role="alert">
+          <AlertDescription>{save.error.message}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      <DialogFooter>
         <Button
           type="button"
           variant="outline"
@@ -277,7 +289,7 @@ export function EmployeeEditForm({
         <Button type="submit" disabled={save.isPending}>
           {save.isPending ? "Guardando…" : "Guardar"}
         </Button>
-      </div>
+      </DialogFooter>
     </form>
   );
 }

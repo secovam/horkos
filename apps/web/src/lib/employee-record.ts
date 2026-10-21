@@ -8,10 +8,12 @@ import {
   MARITAL_STATUS_LIST,
   RELATIONSHIPS,
   RELATIONSHIP_LIST,
+  isEmployeeDocumentKind,
   submissionSchema,
 } from "./submission";
 import type {
   DocumentKind,
+  StoredDocumentKind,
   SubmissionFields,
   SubmissionInput,
 } from "./submission";
@@ -23,6 +25,17 @@ export interface StoredExtraction {
   status: ExtractionStatus;
   fields: Record<string, string>;
   warnings: string[];
+}
+
+// The review compares the employee's documents with what they typed; HR's own documents are not part of it.
+export function employeeExtractions(
+  rows: readonly (Omit<StoredExtraction, "kind"> & {
+    kind: StoredDocumentKind;
+  })[]
+) {
+  return rows.flatMap(({ kind, ...rest }) =>
+    isEmployeeDocumentKind(kind) ? [{ kind, ...rest }] : []
+  );
 }
 
 export type FieldStatus = "matches" | "differs" | "not_extracted";
@@ -157,12 +170,6 @@ export const listEmployeesSchema = employeeSearchSchema.extend({
 });
 
 export const employeeIdSchema = z.object({ invitationId: z.string().min(1) });
-
-export const EXTRACTION_STATUS_LABELS = {
-  extracted: "Leído",
-  unreadable: "Ilegible",
-  failed: "Falló la lectura",
-} satisfies Record<ExtractionStatus, string>;
 
 const WARNING_MESSAGES = {
   not_cfe_or_telmex: "El documento no parece un recibo de CFE o Telmex.",

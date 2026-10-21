@@ -1,5 +1,7 @@
 import { createMiddleware } from "@tanstack/react-start";
 
+import { PublicError } from "@/lib/public-error";
+
 import { createAuth } from "../services";
 
 export const authMiddleware = createMiddleware().server(
@@ -20,7 +22,7 @@ export const requireSessionMiddleware = createMiddleware()
   .middleware([authMiddleware])
   .server(({ next, context }) => {
     if (!context.session) {
-      throw new Error("No autorizado");
+      throw new PublicError("No autorizado");
     }
 
     return next({ context: { session: context.session } });

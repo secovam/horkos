@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { and, eq } from "drizzle-orm";
 
 import { ENV } from "@/env.server";
-import { DOCUMENT_KIND_LIST } from "@/lib/submission";
+import { STORED_DOCUMENT_KIND_LIST } from "@/lib/submission";
 import { createAuth, getDb } from "@/services";
 
 const ASCII_UNSAFE_REGEX = /[^\w.-]/gu;
@@ -24,8 +24,8 @@ function inlineDisposition(fileName: string) {
 
 function isDocumentKind(
   value: string
-): value is (typeof DOCUMENT_KIND_LIST)[number] {
-  return DOCUMENT_KIND_LIST.some((kind) => kind === value);
+): value is (typeof STORED_DOCUMENT_KIND_LIST)[number] {
+  return STORED_DOCUMENT_KIND_LIST.some((kind) => kind === value);
 }
 
 export const Route = createFileRoute("/api/documentos/$invitationId/$kind")({

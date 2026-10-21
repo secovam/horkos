@@ -29,6 +29,7 @@ import { BotIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { ComponentProps, ReactNode } from "react";
 
+import { AutoExtractedBadge } from "@/components/extraction/auto-extracted-badge";
 import {
   tourAnchor,
   useSubmissionTour,
@@ -270,15 +271,7 @@ function TextInputField({
     <Field data-invalid={invalid}>
       <div className="flex items-center gap-2">
         <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
-        {/* Only while the value is still what the document said, so a correction drops the badge. Hidden rather than unmounted: mounting inside a fieldset leaves Chromium with a stale, collapsed layout. */}
-        <span
-          hidden={extracted === undefined || field.state.value !== extracted}
-        >
-          <Badge variant="info">
-            <BotIcon data-icon="inline-start" />
-            Auto-extraído
-          </Badge>
-        </span>
+        <AutoExtractedBadge extracted={extracted} value={field.state.value} />
       </div>
       <Input
         id={field.name}

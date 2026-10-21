@@ -1,15 +1,19 @@
 import { Badge } from "@horkos/ui/components/badge";
 import { Button, buttonVariants } from "@horkos/ui/components/button";
+import { Dialog, DialogContent } from "@horkos/ui/components/dialog";
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
 import { UserSearchIcon, UsersIcon } from "lucide-react";
 import { useState } from "react";
 
 import { EmployeeDocuments } from "@/components/employees/employee-documents";
 import { EmployeeEditForm } from "@/components/employees/employee-edit-form";
+import { EmploymentForm } from "@/components/employees/employment-form";
+import { EmploymentSection } from "@/components/employees/employment-section";
 import { FieldReviewSection } from "@/components/employees/field-review-section";
 import { RecordAction } from "@/components/employees/record-action";
 import { EmptyStateCard } from "@/components/invitations/invitations-empty-state";
 import { PageHeader } from "@/components/layout/page-header";
+import { ScrollToTop } from "@/components/layout/scroll-to-top";
 import { getEmployee } from "@/functions/employees";
 import { recordState } from "@/lib/employee-record";
 
@@ -30,7 +34,7 @@ export const Route = createFileRoute("/_auth/empleados/$invitationId")({
       throw notFound();
     }
 
-    return { ...employee, crumb: employee.employee.employeeName };
+    return { ...employee, crumb: employee.values.fullName };
   },
   notFoundComponent: EmployeeNotFound,
   component: EmployeePage,
@@ -73,18 +77,30 @@ function StateBadge({
 }
 
 function EmployeePage() {
-  const { employee, values, review, documents, extractions } =
-    Route.useLoaderData();
+  const {
+    employee,
+    values,
+    employmentValues,
+    employmentComplete,
+    imssRegistration,
+    review,
+    documents,
+    extractions,
+  } = Route.useLoaderData();
 
   const { invitationId } = Route.useParams();
-  const [editing, setEditing] = useState(false);
+
+  const [editing, setEditing] = useState<"none" | "submission" | "employment">(
+    "none"
+  );
+
   const confirmed = recordState(employee.hrCompletedAt) === "confirmed";
 
   return (
     <>
       <PageHeader
         icon={UsersIcon}
-        title={employee.employeeName}
+        title={values.fullName}
         badge={
           <StateBadge
             confirmed={confirmed}
@@ -99,15 +115,27 @@ function EmployeePage() {
             {confirmed ? (
               <RecordAction action="reopen" invitationId={invitationId} />
             ) : null}
-            {confirmed || editing ? null : (
+            {confirmed || editing !== "none" ? null : (
               <>
-                <Button variant="outline" onClick={() => setEditing(true)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setEditing("employment")}
+                >
+                  {employmentComplete
+                    ? "Editar datos laborales"
+                    : "Completar datos laborales"}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setEditing("submission")}
+                >
                   Editar datos
                 </Button>
                 <RecordAction
                   action="confirm"
                   invitationId={invitationId}
                   needsAttention={review.needsAttention}
+                  employmentComplete={employmentComplete}
                 />
               </>
             )}
@@ -115,28 +143,62 @@ function EmployeePage() {
         }
       />
 
-      {editing && !confirmed ? (
-        <EmployeeEditForm
-          invitationId={invitationId}
-          values={values}
+      {SECTIONS.map((section) => (
+        <FieldReviewSection
+          key={section}
+          section={section}
           fields={review.fields}
-          onDone={() => setEditing(false)}
         />
-      ) : (
-        SECTIONS.map((section) => (
-          <FieldReviewSection
-            key={section}
-            section={section}
+      ))}
+
+      <Dialog
+        open={editing === "submission" && !confirmed}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditing("none");
+          }
+        }}
+      >
+        <DialogContent size="lg">
+          <EmployeeEditForm
+            invitationId={invitationId}
+            values={values}
             fields={review.fields}
+            onDone={() => setEditing("none")}
           />
-        ))
-      )}
+        </DialogContent>
+      </Dialog>
+
+      <EmploymentSection
+        values={employmentValues}
+        complete={employmentComplete}
+      />
+
+      <Dialog
+        open={editing === "employment" && !confirmed}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditing("none");
+          }
+        }}
+      >
+        <DialogContent size="lg">
+          <EmploymentForm
+            invitationId={invitationId}
+            values={employmentValues}
+            imssRegistration={imssRegistration}
+            onDone={() => setEditing("none")}
+          />
+        </DialogContent>
+      </Dialog>
 
       <EmployeeDocuments
         invitationId={invitationId}
         documents={documents}
         extractions={extractions}
       />
+
+      <ScrollToTop />
     </>
   );
 }

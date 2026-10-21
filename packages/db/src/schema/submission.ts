@@ -13,6 +13,7 @@ export const DOCUMENT_KIND_VALUES = [
   "tax_status",
   "imss",
   "proof_of_address",
+  "imss_registration",
 ] as const;
 
 const now = sql`(cast(unixepoch('subsecond') * 1000 as integer))`;

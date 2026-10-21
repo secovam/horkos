@@ -1,0 +1,158 @@
+import { defineRelationsPart, sql } from "drizzle-orm";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+
+import { invitation } from "./invitation";
+
+// Kerberos's catalog, spelling included, so values stay compatible. Sorted for the combobox.
+export const JOB_TITLE_VALUES = [
+  "Almacenista",
+  "Analista de AA e ICP",
+  "Analista de Captura AL",
+  "Analista de Captura FF",
+  "Analista de Captura FF Sucursales",
+  "Analista de Compras",
+  "Analista de Cromatografía",
+  "Analista De Enlace Tecnico Re",
+  "Analista de Fisicoquímicos Ag",
+  "Analista de Fisicoquímicos Ali, AL, FF",
+  "Analista de Fisicoquímicos Re",
+  "Analista de informes AQ Sucursales",
+  "Analista de Microbiología",
+  "Analista de Proyectos A",
+  "Analista de Proyectos Sucursales",
+  "Analista de Riesgo",
+  "Analista de Soporte Técnico AQ Matriz",
+  "Analista de Soporte Técnico FF",
+  "Asesor de Ventas",
+  "Asesor de Ventas Sucursales",
+  "Asistente Administrativo",
+  "Asistente Administrativo Sucursal",
+  "Asistente de Cocina",
+  "Asistente de Dirección",
+  "Asistente de Informes de AQ Matriz",
+  "Asistente Técnico",
+  "Asistente Técnico Operativo Sucursales",
+  "Auditor de Aseguramiento de la Calidad",
+  "Capturista de informes Ag, Ali, Re",
+  "Chef Ejecutivo",
+  "Cocinera",
+  "Coordinado De Soporte Tecnico Aq",
+  "Coordinador de AA e ICP",
+  "Coordinador de Almacén",
+  "Coordinador de Análisis de Riesgo",
+  "Coordinador de Control de Equipos",
+  "Coordinador de Cromatografía",
+  "Coordinador de Estudios Especiales A",
+  "Coordinador de Fisicoquímicos (Ag)",
+  "Coordinador de Fisicoquímicos (Ali, AL, FF)",
+  "Coordinador de Fisicoquímicos Re",
+  "Coordinador de Gestión",
+  "Coordinador de Gestión de Calidad LE",
+  "Coordinador de Gestión de Calidad UI",
+  "Coordinador de Informes Ag, Ali, Re",
+  "Coordinador de Logística",
+  "Coordinador de Microbiología",
+  "Coordinador de Muestreo Agua",
+  "Coordinador de Muestreo Alimentos",
+  "Coordinador de Muestreo de Residuos",
+  "Coordinador de Recepción de Muestras",
+  "Coordinador de Reportes de AL",
+  "Coordinador De Reportes FF",
+  "Coordinador Técnico Sucursales",
+  "Desarrollador de Softwere",
+  "Ejecutivo de Atracción de Talento",
+  "Ejecutivo de compras y cuentas por pagar Sucursales",
+  "Ejecutivo de Crédito y Cobranza",
+  "Ejecutivo de Crédito y Cobranza Sucursales",
+  "Ejecutivo de facturación",
+  "Ejecutivo de facturación Sucursales",
+  "Ejecutivo de Nómina",
+  "Enlace Tecnico Matriz",
+  "Especialista en reconocimientos de AQ Matriz",
+  "Gerente Administrativo",
+  "Gerente Corporativo de Gestión y Estudios Especiales",
+  "Gerente Corporativo de Recursos Humanos",
+  "Gerente de Laboratorio",
+  "Gerente General de Sucursales",
+  "Gerente Técnico Corporativo",
+  "Gerente Técnico Matriz",
+  "Gerente Técnico Sustituto",
+  "Gestor",
+  "Gestor de Talento",
+  "Ingeniero de Campo de AQ Matriz",
+  "Ingeniero de Campo de AQ Sucursales",
+  "Ingeniero de Proyecto",
+  "Ingeniero de Proyectos",
+  "Ingeniero de Sistemas Jr",
+  "Inspector RSP",
+  "Intendente",
+  "Jefe Administrativo Sucursales",
+  "Jefe de Agentes Químicos Matriz",
+  "Jefe de Almacén",
+  "Jefe de Gestión y Estudios Especiales Sucursales",
+  "Jefe de Logística y Activos Sucursales",
+  "Jefe de Seguridad",
+  "Jefe de Soporte Técnico AL",
+  "Jefe de Soporte Técnico FF",
+  "Jefe de Tecnologías de la Información",
+  "Jefe Jurídico",
+  "Jefe Mecánico Automotriz",
+  "Mensajero A",
+  "Operador de Mantenimiento",
+  "Practicante (Externo)",
+  "Recepcionista",
+  "Recepcionista de Muestras",
+  "Tecnico De Campo",
+  "Técnico de Campo Labaind",
+  "Técnico de Campo Secovam",
+  "Técnico de Campo Sucursales",
+  "Técnico de Logistica",
+  "Técnico de Seguridad e Higiene",
+] as const;
+
+export const COMPANY_VALUES = [
+  "SERALAM",
+  "SECOVAM",
+  "LABAIND",
+  "SECOLAM",
+] as const;
+
+export const SEX_VALUES = ["male", "female"] as const;
+
+const now = sql`(cast(unixepoch('subsecond') * 1000 as integer))`;
+
+// What HR fills in, kept apart from `submission`, which is what the employee sent.
+export const employment = sqliteTable("employment", {
+  invitationId: text("invitation_id")
+    .primaryKey()
+    .references(() => invitation.id, { onDelete: "cascade" }),
+  workEmail: text("work_email"),
+  personalEmail: text("personal_email").notNull(),
+  jobTitle: text("job_title", { enum: JOB_TITLE_VALUES }).notNull(),
+  company: text("company", { enum: COMPANY_VALUES }).notNull(),
+  nationality: text("nationality").notNull(),
+  sex: text("sex", { enum: SEX_VALUES }).notNull(),
+  hireDate: text("hire_date").notNull(),
+  dailySalaryCents: integer("daily_salary_cents").notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    .default(now)
+    .notNull(),
+});
+
+export const employmentRelations = defineRelationsPart(
+  { invitation, employment },
+  (r) => ({
+    employment: {
+      invitation: r.one.invitation({
+        from: r.employment.invitationId,
+        to: r.invitation.id,
+      }),
+    },
+    invitation: {
+      employment: r.one.employment({
+        from: r.invitation.id,
+        to: r.employment.invitationId,
+      }),
+    },
+  })
+);

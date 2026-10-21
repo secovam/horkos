@@ -41,19 +41,31 @@ const ACTIONS = {
 const ATTENTION_NOTICE =
   "Hay datos que difieren de los documentos o documentos sin leer.";
 
+const EMPLOYMENT_NOTICE =
+  "Completa los datos laborales antes de confirmar el expediente.";
+
 export function RecordAction({
   action,
   invitationId,
   needsAttention = false,
+  employmentComplete = true,
 }: {
   action: keyof typeof ACTIONS;
   invitationId: string;
   needsAttention?: boolean;
+  employmentComplete?: boolean;
 }) {
   const config = ACTIONS[action];
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const queryClient = useQueryClient();
+
+  const description =
+    action === "confirm" && needsAttention
+      ? `${ATTENTION_NOTICE} ${config.description}`
+      : config.description;
+
+  const blocked = action === "confirm" && !employmentComplete;
 
   const mutation = useMutation({
     mutationFn: () => config.run({ data: { invitationId } }),
@@ -79,15 +91,13 @@ export function RecordAction({
         <AlertDialogHeader>
           <AlertDialogTitle>{config.title}</AlertDialogTitle>
           <AlertDialogDescription>
-            {action === "confirm" && needsAttention
-              ? `${ATTENTION_NOTICE} ${config.description}`
-              : config.description}
+            {blocked ? EMPLOYMENT_NOTICE : description}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancelar</AlertDialogCancel>
           <AlertDialogAction
-            disabled={mutation.isPending}
+            disabled={mutation.isPending || blocked}
             onClick={() => mutation.mutate()}
           >
             {config.label}

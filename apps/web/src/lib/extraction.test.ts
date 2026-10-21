@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, test } from "vitest";
 
-import { parseDocument } from "./extraction";
+import { parseDocument, parseImssRegistration } from "./extraction";
 
 const SAT_CONSTANCIA = `
 # Constancia de Situación Fiscal
@@ -140,4 +140,120 @@ describe("parseDocument proof_of_address", () => {
       ).warnings
     ).toEqual([]);
   });
+});
+
+// Fictional data in the layout LiteParse returns for an IDSE "Constancia de presentación de movimientos afiliatorios".
+const IDSE_CONSTANCIA = `# Constancia de presentación de movimientos afiliatorios IMSS DESDE SU EMPRESA
+
+Razón Social: EMPRESA FICTICIA SA DE CV
+
+| Número de lote: | 100000001 |  |  |
+|---|---|---|---|
+| RFC del patrón: | EFI000101AB1 | Fecha y hora de recepción del lote: | 2026-03-20 08:17 |
+| Registro Patronal: | Z0000000000 | Serial del certificado: | 00000100000200000001 |
+
+Relación de movimientos operados
+
+Tipo NSS Nombre Asegurado Sal. Base Ext. UMF Tipo Fec-Mov Tipo C. Baja
+
+8 12345678901 PRUEBA FICTICIA MARIA $ 695.55 1 069 0 02/03/2026 1 0
+
+Para efectos de lo anterior se entenderá por: Modif. (Modificación de salario), Reing. (Reingreso), Fec-Mov (Fecha de movimiento), NSS (Número de Seguridad Social), Sal. Base (Salario base).`;
+
+describe("parseImssRegistration", () => {
+  it("reads salary and movement date from an IDSE constancia", () => {
+    expect(parseImssRegistration(IDSE_CONSTANCIA)).toEqual({
+      dailySalary: "695.55",
+      hireDate: "2026-03-02",
+    });
+  });
+
+  test.each([
+    ["Salario Diario: $ 695.55", "695.55"],
+    ["Salario Diario Integrado | 695.55 |", "695.55"],
+    ["Salario Base de Cotización: 1,234.5", "1234.50"],
+    ["Salario base de cotizacion $ 400", "400.00"],
+    ["SBC: 695.55", "695.55"],
+    ["Importe $ 695.55 pesos", "695.55"],
+  ])("reads the salary from %j", (text, dailySalary) => {
+    expect(parseImssRegistration(text)).toEqual({ dailySalary });
+  });
+
+  it("reads the insured's row of a relación de movimientos operados", () => {
+    const rows = `Relación de movimientos operados
+Registro patronal Z0000000000
+NSS Nombre Tipo Sal. Base
+12345678901 FICTICIA PRUEBA MARIA ALTA $ 1,005.20`;
+
+    expect(parseImssRegistration(rows)).toEqual({ dailySalary: "1005.20" });
+  });
+
+  it("prefers a labeled salary over any other amount", () => {
+    const text = "Cuota $ 20.00\nSalario Diario: 695.55";
+
+    expect(parseImssRegistration(text)).toEqual({ dailySalary: "695.55" });
+  });
+
+  it("proposes nothing when there is no amount", () => {
+    expect(parseImssRegistration("Alta de trabajador sin importes")).toEqual(
+      {}
+    );
+    expect(parseImssRegistration("Salario Diario: pendiente")).toEqual({});
+  });
+
+  it("drops a salary below the minimum the form accepts", () => {
+    expect(parseImssRegistration("Salario Diario: $ 200.00")).toEqual({});
+  });
+});
+
+describe("parseImssRegistration hire date", () => {
+  const row = "12345678901 FICTICIA PRUEBA MARIA ALTA $ 695.55";
+
+  test.each([
+    ["Fecha de movimiento: 02/03/2026", "2026-03-02"],
+    ["Fecha mov. | 2-3-2026 |", "2026-03-02"],
+    ["FECHA DE ALTA 15/01/2026", "2026-01-15"],
+    ["Fecha de reingreso: 31-12-2025", "2025-12-31"],
+    ["Fecha de inicio: 01/02/2026", "2026-02-01"],
+  ])("reads the labeled date %j", (text, hireDate) => {
+    expect(parseImssRegistration(text)).toEqual({ hireDate });
+  });
+
+  it("prefers the labeled date over the row's date", () => {
+    const text = `Fecha de movimiento: 02/03/2026\n${row} 05/03/2026`;
+
+    expect(parseImssRegistration(text)).toMatchObject({
+      hireDate: "2026-03-02",
+    });
+  });
+
+  it("falls back to the first date on the insured's row", () => {
+    const text = `Fecha de proceso 20/03/2026\nNSS Nombre Tipo Fecha\n12345678901 FICTICIA PRUEBA ALTA 02/03/2026 $ 695.55`;
+
+    expect(parseImssRegistration(text)).toEqual({
+      dailySalary: "695.55",
+      hireDate: "2026-03-02",
+    });
+  });
+
+  it("ignores an unlabeled date outside the insured's row", () => {
+    const text = `Acuse de movimientos afiliatorios\n20/03/2026\n${row}`;
+
+    expect(parseImssRegistration(text)).toEqual({ dailySalary: "695.55" });
+  });
+
+  it("proposes no date when the only date is a header date", () => {
+    expect(
+      parseImssRegistration(
+        "Acuse de movimientos 20/03/2026\nSalario Diario: 695.55"
+      )
+    ).toEqual({ dailySalary: "695.55" });
+  });
+
+  it.each(["Fecha de movimiento: 31/02/2026", "Fecha de alta: 01/13/2026"])(
+    "drops the impossible date %j",
+    (text) => {
+      expect(parseImssRegistration(text)).toEqual({});
+    }
+  );
 });
