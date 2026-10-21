@@ -392,6 +392,7 @@ test("HR corrects the data, confirms the record and reopens it", async ({
     "SEISCIENTOS NOVENTA Y CINCO PESOS 55/100"
   );
   expect(form.getTextField("beneficiary_role").getText()).toBe("Hermano/a");
+  expect(form.getFields().every((field) => field.isReadOnly())).toBe(true);
 
   await expect(
     page.getByRole("navigation", { name: "breadcrumb" })

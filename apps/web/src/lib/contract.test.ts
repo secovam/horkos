@@ -111,7 +111,7 @@ test("a submission without beneficiary is not ready for a contract", () => {
   expect(isContractReady({ ...record, maritalStatus: null })).toBe(false);
 });
 
-test("fills every field of the template and keeps them as form fields", async () => {
+test("fills every field of the template as a read-only form field", async () => {
   const fields = contractFields(record, job, new Date());
   const pdf = await PDFDocument.load(await fillContract(fields));
   const form = pdf.getForm();
@@ -127,4 +127,5 @@ test("fills every field of the template and keeps them as form fields", async ()
         ])
     )
   ).toEqual(fields);
+  expect(form.getFields().every((field) => field.isReadOnly())).toBe(true);
 });

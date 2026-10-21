@@ -197,7 +197,11 @@ export async function fillContract(fields: ContractFields) {
   const form = pdf.getForm();
 
   for (const [name, value] of Object.entries(fields)) {
-    form.getTextField(name).setText(value);
+    const field = form.getTextField(name);
+
+    field.setText(value);
+    // Read-only instead of flattened, so the values stay in the template's fields.
+    field.enableReadOnly();
   }
 
   // pdf-lib types its bytes over ArrayBufferLike, which `Response` does not accept.
