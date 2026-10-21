@@ -429,3 +429,56 @@ test("HR corrects the data, confirms the record and reopens it", async ({
 
   expect(reopened.status()).toBe(404);
 });
+
+test("a record confirmed before employment data existed offers no contract", async ({
+  app,
+  page,
+  browser,
+}) => {
+  await login(app, page);
+  await page.getByRole("link", { name: "Invitaciones", exact: true }).click();
+  await invite(page);
+
+  const { context, employee } = await openForm(browser, app);
+
+  try {
+    await submitWithAllDocuments(employee);
+  } finally {
+    await context.close();
+  }
+
+  // Confirming used to skip employment data; recreate such a record directly.
+  await app.db
+    .prepare("UPDATE invitation SET hr_completed_at = ?")
+    .bind(Date.now())
+    .run();
+
+  await page.getByRole("link", { name: "Empleados", exact: true }).click();
+  await page.getByRole("link", { name: /Ver detalle/u }).click();
+  await expect(
+    page.getByText("Este expediente no puede generar un contrato")
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Descargar contrato" })
+  ).toBeHidden();
+
+  const invitationId = new URL(page.url()).pathname.split("/").at(-1);
+
+  const contract = await page.request.get(
+    `${app.baseURL}/api/contratos/${invitationId}`
+  );
+
+  expect(contract.status()).toBe(404);
+
+  await page.getByRole("button", { name: "Corregir datos" }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Corregir datos" })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Completar datos laborales" })
+  ).toBeVisible();
+  await expect(
+    page.getByText("Este expediente no puede generar un contrato")
+  ).toBeHidden();
+});

@@ -1,8 +1,18 @@
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@horkos/ui/components/alert";
 import { Badge } from "@horkos/ui/components/badge";
 import { Button, buttonVariants } from "@horkos/ui/components/button";
 import { Dialog, DialogContent } from "@horkos/ui/components/dialog";
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
-import { DownloadIcon, UserSearchIcon, UsersIcon } from "lucide-react";
+import {
+  DownloadIcon,
+  TriangleAlertIcon,
+  UserSearchIcon,
+  UsersIcon,
+} from "lucide-react";
 import { useState } from "react";
 
 import { EmployeeDocuments } from "@/components/employees/employee-documents";
@@ -83,6 +93,7 @@ function EmployeePage() {
     employmentValues,
     employmentComplete,
     imssRegistration,
+    contractReady,
     review,
     documents,
     extractions,
@@ -115,14 +126,16 @@ function EmployeePage() {
             {confirmed ? (
               <>
                 <RecordAction action="reopen" invitationId={invitationId} />
-                <a
-                  className={buttonVariants()}
-                  href={`/api/contratos/${invitationId}`}
-                  download
-                >
-                  <DownloadIcon data-icon="inline-start" />
-                  Descargar contrato
-                </a>
+                {contractReady ? (
+                  <a
+                    className={buttonVariants()}
+                    href={`/api/contratos/${invitationId}`}
+                    download
+                  >
+                    <DownloadIcon data-icon="inline-start" />
+                    Descargar contrato
+                  </a>
+                ) : null}
               </>
             ) : null}
             {confirmed || editing !== "none" ? null : (
@@ -152,6 +165,17 @@ function EmployeePage() {
           </div>
         }
       />
+
+      {confirmed && !contractReady ? (
+        <Alert variant="destructive">
+          <TriangleAlertIcon />
+          <AlertTitle>Este expediente no puede generar un contrato</AlertTitle>
+          <AlertDescription>
+            Faltan los datos laborales, el estado civil o el beneficiario. Usa
+            «Corregir datos» para completarlos y vuelve a confirmar.
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       {SECTIONS.map((section) => (
         <FieldReviewSection
