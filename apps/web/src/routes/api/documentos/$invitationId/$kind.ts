@@ -3,24 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { and, eq } from "drizzle-orm";
 
 import { ENV } from "@/env.server";
+import { contentDisposition } from "@/lib/content-disposition";
 import { STORED_DOCUMENT_KIND_LIST } from "@/lib/submission";
 import { createAuth, getDb } from "@/services";
-
-const ASCII_UNSAFE_REGEX = /[^\w.-]/gu;
-
-const RFC_5987_RESERVED_REGEX = /['()*]/gu;
-
-// `filename*` carries the real name; the quoted fallback is for clients that ignore it.
-function inlineDisposition(fileName: string) {
-  const fallback = fileName.replaceAll(ASCII_UNSAFE_REGEX, "_");
-
-  const encoded = encodeURIComponent(fileName).replaceAll(
-    RFC_5987_RESERVED_REGEX,
-    (char) => `%${char.codePointAt(0)?.toString(16).toUpperCase()}`
-  );
-
-  return `inline; filename="${fallback}"; filename*=UTF-8''${encoded}`;
-}
 
 function isDocumentKind(
   value: string
@@ -66,7 +51,7 @@ export const Route = createFileRoute("/api/documentos/$invitationId/$kind")({
         return new Response(object.body, {
           headers: {
             "Content-Type": found.contentType,
-            "Content-Disposition": inlineDisposition(found.fileName),
+            "Content-Disposition": contentDisposition("inline", found.fileName),
             "Content-Length": String(object.size),
             "Cache-Control": "private, no-store",
             "X-Content-Type-Options": "nosniff",

@@ -2,7 +2,7 @@ import { Badge } from "@horkos/ui/components/badge";
 import { Button, buttonVariants } from "@horkos/ui/components/button";
 import { Dialog, DialogContent } from "@horkos/ui/components/dialog";
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
-import { UserSearchIcon, UsersIcon } from "lucide-react";
+import { DownloadIcon, UserSearchIcon, UsersIcon } from "lucide-react";
 import { useState } from "react";
 
 import { EmployeeDocuments } from "@/components/employees/employee-documents";
@@ -113,7 +113,17 @@ function EmployeePage() {
         actions={
           <div className="flex items-center gap-3">
             {confirmed ? (
-              <RecordAction action="reopen" invitationId={invitationId} />
+              <>
+                <RecordAction action="reopen" invitationId={invitationId} />
+                <a
+                  className={buttonVariants()}
+                  href={`/api/contratos/${invitationId}`}
+                  download
+                >
+                  <DownloadIcon data-icon="inline-start" />
+                  Descargar contrato
+                </a>
+              </>
             ) : null}
             {confirmed || editing !== "none" ? null : (
               <>

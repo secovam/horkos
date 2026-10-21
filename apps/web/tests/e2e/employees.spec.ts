@@ -1,4 +1,7 @@
+import { readFile } from "node:fs/promises";
+
 import type { Page } from "@playwright/test";
+import { PDFDocument } from "pdf-lib";
 
 import { clickUntil, invite, login, toastMessage } from "./actions";
 import { expect, test } from "./fixtures";
@@ -371,6 +374,25 @@ test("HR corrects the data, confirms the record and reopens it", async ({
     fullPage: true,
   });
 
+  const downloading = page.waitForEvent("download");
+  await page.getByRole("link", { name: "Descargar contrato" }).click();
+  const contract = await downloading;
+  expect(contract.suggestedFilename()).toBe(
+    "Contrato Maria Ficticia Prueba.pdf"
+  );
+
+  const filled = await PDFDocument.load(await readFile(await contract.path()));
+  const form = filled.getForm();
+
+  expect(form.getTextField("name").getText()).toBe("Maria Ficticia Prueba");
+  expect(form.getTextField("marital_status").getText()).toBe("Casada");
+  expect(form.getTextField("role").getText()).toBe("Jefe de Almacén");
+  expect(form.getTextField("salary_number").getText()).toBe("695.55");
+  expect(form.getTextField("salary_text").getText()).toBe(
+    "SEISCIENTOS NOVENTA Y CINCO PESOS 55/100"
+  );
+  expect(form.getTextField("beneficiary_role").getText()).toBe("Hermano/a");
+
   await expect(
     page.getByRole("navigation", { name: "breadcrumb" })
   ).toContainText("Maria Ficticia Prueba");
@@ -397,4 +419,13 @@ test("HR corrects the data, confirms the record and reopens it", async ({
     page.getByRole("button", { name: "Editar datos", exact: true })
   ).toBeVisible();
   await expect(page.getByText("Confirmado", { exact: true })).toBeHidden();
+  await expect(
+    page.getByRole("link", { name: "Descargar contrato" })
+  ).toBeHidden();
+
+  const reopened = await page.request.get(
+    `${app.baseURL}/api/contratos/${new URL(page.url()).pathname.split("/").at(-1)}`
+  );
+
+  expect(reopened.status()).toBe(404);
 });
