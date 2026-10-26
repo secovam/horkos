@@ -29,6 +29,9 @@ export const SEPOMEX_AREAS = {
 
 export const SEPOMEX_UNAVAILABLE_CODE = "00000";
 
+// The stand-in Turnstile siteverify accepts only this token.
+export const TURNSTILE_PASSING_TOKEN = "turnstile-pass";
+
 const COMPATIBILITY_DATE = "2026-07-30";
 
 const capturedMailSchema = z.object({
@@ -112,6 +115,8 @@ export default { fetch: (request, env, context) => app.fetch(request, env, conte
             BETTER_AUTH_SECRET: "test-only-secret-with-at-least-32-characters",
             BETTER_AUTH_URL: "http://127.0.0.1",
             EMAIL_FROM: "Horkos Pruebas <verify@example.test>",
+            TURNSTILE_SITE_KEY: "test-site-key",
+            TURNSTILE_SECRET_KEY: "test-secret-key",
           },
         },
         {
@@ -140,12 +145,18 @@ export default { fetch: (request, env, context) => app.fetch(request, env, conte
           durableObjects: { EXTRACTOR: "Extractor" },
         },
         {
+          // Also answers Turnstile's siteverify, the only other outbound call.
           name: "sepomex",
           modules: true,
           script: `const areas = ${JSON.stringify(SEPOMEX_AREAS)};
             export default {
-              fetch(request) {
-                const code = new URL(request.url).searchParams.get("zip_code");
+              async fetch(request) {
+                const url = new URL(request.url);
+                if (url.hostname === "challenges.cloudflare.com") {
+                  const form = new URLSearchParams(await request.text());
+                  return Response.json({ success: form.get("response") === "${TURNSTILE_PASSING_TOKEN}" });
+                }
+                const code = url.searchParams.get("zip_code");
                 if (code === "${SEPOMEX_UNAVAILABLE_CODE}") {
                   return new Response("down", { status: 500 });
                 }
