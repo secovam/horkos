@@ -20,6 +20,7 @@ import {
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   ChevronsUpDownIcon,
+  ClipboardListIcon,
   HouseIcon,
   LogOutIcon,
   MailIcon,
@@ -30,6 +31,7 @@ import { authClient } from "@/lib/auth-client";
 
 const NAV_ITEMS = [
   { to: "/dashboard", label: "Inicio", icon: HouseIcon },
+  { to: "/registros", label: "Registros", icon: ClipboardListIcon },
   { to: "/invitaciones", label: "Invitaciones", icon: MailIcon },
   { to: "/empleados", label: "Empleados", icon: UsersIcon },
 ] as const;

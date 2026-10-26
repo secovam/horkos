@@ -54,9 +54,19 @@ export const INVITATION_TABS = [
   { value: "revoked", label: "Revocadas" },
 ] as const satisfies { value: InvitationTab; label: string }[];
 
+// Also validates the public /registro page, so lengths are capped.
 export const newInvitationSchema = z.object({
-  employeeName: z.string().trim().min(1, "Ingresa el nombre del empleado"),
-  email: z.string().trim().email("Ingresa un correo válido").toLowerCase(),
+  employeeName: z
+    .string()
+    .trim()
+    .min(1, "Ingresa el nombre del empleado")
+    .max(200, "El nombre es demasiado largo"),
+  email: z
+    .string()
+    .trim()
+    .max(254, "El correo es demasiado largo")
+    .email("Ingresa un correo válido")
+    .toLowerCase(),
 });
 
 const TOKEN_BYTES = 32;
