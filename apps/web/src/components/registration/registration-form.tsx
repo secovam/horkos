@@ -64,7 +64,8 @@ export function RegistrationForm({ siteKey }: { siteKey: string }) {
             </h1>
             <p className="text-muted-foreground text-pretty">
               Recursos Humanos te enviará por correo un enlace para subir tus
-              documentos. Ya puedes cerrar esta página.
+              documentos cuando comience la campaña de actualización de datos.
+              Ya puedes cerrar esta página.
             </p>
           </div>
         ) : (
@@ -87,7 +88,8 @@ export function RegistrationForm({ siteKey }: { siteKey: string }) {
                 </h1>
                 <p className="text-muted-foreground text-pretty">
                   Déjanos tu nombre y correo. Recursos Humanos te enviará un
-                  enlace para subir tus documentos.
+                  enlace para subir tus documentos cuando comience la campaña de
+                  actualización de datos.
                 </p>
               </div>
             </header>

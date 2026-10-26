@@ -63,7 +63,7 @@ function StatusContent({ rows, isError, q, onRetry }: RegistrationsTableProps) {
     <EmptyStateCard
       icon={<ClipboardListIcon />}
       title="No hay registros pendientes"
-      description="Comparte la página /registro con tus empleados. Quienes se registren aparecerán aquí."
+      description="Comparte la página /registro con los empleados. Quienes se registren aparecerán aquí."
     />
   );
 }
