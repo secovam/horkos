@@ -1,8 +1,18 @@
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@horkos/ui/components/alert";
 import { Badge } from "@horkos/ui/components/badge";
 import { Button, buttonVariants } from "@horkos/ui/components/button";
 import { Dialog, DialogContent } from "@horkos/ui/components/dialog";
 import { Link, createFileRoute, notFound } from "@tanstack/react-router";
-import { UserSearchIcon, UsersIcon } from "lucide-react";
+import {
+  DownloadIcon,
+  TriangleAlertIcon,
+  UserSearchIcon,
+  UsersIcon,
+} from "lucide-react";
 import { useState } from "react";
 
 import { EmployeeDocuments } from "@/components/employees/employee-documents";
@@ -83,6 +93,7 @@ function EmployeePage() {
     employmentValues,
     employmentComplete,
     imssRegistration,
+    contractReady,
     review,
     documents,
     extractions,
@@ -113,7 +124,19 @@ function EmployeePage() {
         actions={
           <div className="flex items-center gap-3">
             {confirmed ? (
-              <RecordAction action="reopen" invitationId={invitationId} />
+              <>
+                <RecordAction action="reopen" invitationId={invitationId} />
+                {contractReady ? (
+                  <a
+                    className={buttonVariants()}
+                    href={`/api/contratos/${invitationId}`}
+                    download
+                  >
+                    <DownloadIcon data-icon="inline-start" />
+                    Descargar contrato
+                  </a>
+                ) : null}
+              </>
             ) : null}
             {confirmed || editing !== "none" ? null : (
               <>
@@ -142,6 +165,17 @@ function EmployeePage() {
           </div>
         }
       />
+
+      {confirmed && !contractReady ? (
+        <Alert variant="destructive">
+          <TriangleAlertIcon />
+          <AlertTitle>Este expediente no puede generar un contrato</AlertTitle>
+          <AlertDescription>
+            Faltan los datos laborales, el estado civil o el beneficiario. Usa
+            «Corregir datos» para completarlos y vuelve a confirmar.
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       {SECTIONS.map((section) => (
         <FieldReviewSection

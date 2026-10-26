@@ -8,7 +8,7 @@ Horkos es una herramienta interna para recabar la información de los empleados 
 2. **El empleado carga sus documentos.** Sin crear cuenta, el empleado abre su link en el navegador de una computadora (en el celular ve un aviso para cambiar de dispositivo) y sube su comprobante de domicilio, constancia de situación fiscal y constancia del IMSS, junto con los datos que él mismo conozca.
 3. **Horkos extrae la información.** Los documentos se guardan en un bucket privado de R2; un contenedor convierte cada PDF en texto y Horkos extrae de ahí los datos. El código postal se completa con SEPOMEX.
 4. **RH valida y completa.** RH revisa lo extraído, corrige lo necesario y llena el resto de la información del contrato. Ningún contrato se genera sin esta revisión.
-5. **Se descarga el contrato** _(pendiente)_. Horkos llena los campos AcroForm de un template PDF y RH descarga el contrato listo para imprimir. La firma es física, fuera de Horkos.
+5. **Se descarga el contrato.** Con el expediente confirmado, Horkos llena los campos AcroForm del template PDF y RH descarga el contrato listo para imprimir. La firma es física, fuera de Horkos. Por ahora el template es el contrato de SECOLAM que usa Kerberos, para pruebas.
 
 ## Principios
 

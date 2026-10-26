@@ -14,6 +14,7 @@ import {
 } from "drizzle-orm";
 import { z } from "zod";
 
+import { isContractReady } from "@/lib/contract";
 import {
   EMPLOYEES_PAGE_SIZE,
   employeeExtractions,
@@ -179,6 +180,9 @@ export const getEmployee = createServerFn({ method: "POST" })
           }
         : null,
       employmentComplete: savedEmployment !== undefined,
+      // Records confirmed before HR filled in employment data can be confirmed yet still lack it.
+      contractReady:
+        savedEmployment !== undefined && isContractReady(submitted),
       documents,
       extractions: extractions.map(({ kind, status, warnings }) => ({
         kind,

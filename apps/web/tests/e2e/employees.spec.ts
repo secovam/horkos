@@ -1,4 +1,7 @@
+import { readFile } from "node:fs/promises";
+
 import type { Page } from "@playwright/test";
+import { PDFDocument } from "pdf-lib";
 
 import { clickUntil, invite, login, toastMessage } from "./actions";
 import { expect, test } from "./fixtures";
@@ -371,6 +374,26 @@ test("HR corrects the data, confirms the record and reopens it", async ({
     fullPage: true,
   });
 
+  const downloading = page.waitForEvent("download");
+  await page.getByRole("link", { name: "Descargar contrato" }).click();
+  const contract = await downloading;
+  expect(contract.suggestedFilename()).toBe(
+    "Contrato Maria Ficticia Prueba.pdf"
+  );
+
+  const filled = await PDFDocument.load(await readFile(await contract.path()));
+  const form = filled.getForm();
+
+  expect(form.getTextField("name").getText()).toBe("Maria Ficticia Prueba");
+  expect(form.getTextField("marital_status").getText()).toBe("Casada");
+  expect(form.getTextField("role").getText()).toBe("Jefe de Almacén");
+  expect(form.getTextField("salary_number").getText()).toBe("695.55");
+  expect(form.getTextField("salary_text").getText()).toBe(
+    "SEISCIENTOS NOVENTA Y CINCO PESOS 55/100"
+  );
+  expect(form.getTextField("beneficiary_role").getText()).toBe("Hermano/a");
+  expect(form.getFields().every((field) => field.isReadOnly())).toBe(true);
+
   await expect(
     page.getByRole("navigation", { name: "breadcrumb" })
   ).toContainText("Maria Ficticia Prueba");
@@ -397,4 +420,66 @@ test("HR corrects the data, confirms the record and reopens it", async ({
     page.getByRole("button", { name: "Editar datos", exact: true })
   ).toBeVisible();
   await expect(page.getByText("Confirmado", { exact: true })).toBeHidden();
+  await expect(
+    page.getByRole("link", { name: "Descargar contrato" })
+  ).toBeHidden();
+
+  const reopened = await page.request.get(
+    `${app.baseURL}/api/contratos/${new URL(page.url()).pathname.split("/").at(-1)}`
+  );
+
+  expect(reopened.status()).toBe(404);
+});
+
+test("a record confirmed before employment data existed offers no contract", async ({
+  app,
+  page,
+  browser,
+}) => {
+  await login(app, page);
+  await page.getByRole("link", { name: "Invitaciones", exact: true }).click();
+  await invite(page);
+
+  const { context, employee } = await openForm(browser, app);
+
+  try {
+    await submitWithAllDocuments(employee);
+  } finally {
+    await context.close();
+  }
+
+  // Confirming used to skip employment data; recreate such a record directly.
+  await app.db
+    .prepare("UPDATE invitation SET hr_completed_at = ?")
+    .bind(Date.now())
+    .run();
+
+  await page.getByRole("link", { name: "Empleados", exact: true }).click();
+  await page.getByRole("link", { name: /Ver detalle/u }).click();
+  await expect(
+    page.getByText("Este expediente no puede generar un contrato")
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Descargar contrato" })
+  ).toBeHidden();
+
+  const invitationId = new URL(page.url()).pathname.split("/").at(-1);
+
+  const contract = await page.request.get(
+    `${app.baseURL}/api/contratos/${invitationId}`
+  );
+
+  expect(contract.status()).toBe(404);
+
+  await page.getByRole("button", { name: "Corregir datos" }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Corregir datos" })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Completar datos laborales" })
+  ).toBeVisible();
+  await expect(
+    page.getByText("Este expediente no puede generar un contrato")
+  ).toBeHidden();
 });

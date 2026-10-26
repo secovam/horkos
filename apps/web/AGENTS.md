@@ -17,6 +17,7 @@ TanStack Start app (React 19, TanStack Router, Query, Form) built with Vite and 
 | `src/worker.ts` | Worker entry (`main` in `alchemy.run.ts`): `fetch` wrapped in evlog request logs (user tagged, invitation tokens redacted) plus the `scheduled` cron and `queue` consumer from `src/worker-handlers.ts` |
 | `src/services/invitation-queue.ts` | Enqueues unsent invitations and emails them from the queue, one at a time |
 | `src/lib/extraction.ts` | Parsers from document text to form fields, one per `DocumentKind` (`parseDocument`); drops values the form would reject |
+| `src/lib/contract.ts` | Record to contract: words each value for the template (`contractFields`) and fills the AcroForm fields of `src/templates/contract.pdf` (`fillContract`) |
 | `src/services/extractor.ts` | Sends a PDF to the `EXTRACTOR` container for its text; a container failure becomes status `failed`, never a failed upload |
 | `scripts/seed-employees.ts` | `pnpm seed:employees <csv>`: HR list to `packages/db/seed/employees.sql` |
 
