@@ -14,7 +14,7 @@ import type {
 } from "@/lib/extraction";
 import type { DocumentKind } from "@/lib/submission";
 
-// Matches `maxInstances` in alchemy.run.ts.
+// The only cap on extractor containers: each Durable Object instance runs one.
 const CONTAINER_INSTANCES = 3;
 
 // Cold start plus OCR on a scanned page.
