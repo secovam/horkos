@@ -12,11 +12,12 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@effect/platform-bun": "4.0.0-rc.115",
-    "@effect/platform-node": "4.0.0-rc.115",
+    "@alchemy.run/cloudflare": "2.0.0-beta.84",
+    "@effect/platform-bun": "4.0.6",
+    "@effect/platform-node": "4.0.6",
     "@horkos/config": "workspace:*",
-    "alchemy": "2.0.0-beta.79",
-    "effect": "4.0.0-rc.115",
+    "alchemy": "2.0.0-beta.84",
+    "effect": "4.0.6",
     "typescript": "catalog:",
     "varlock": "catalog:"
   }

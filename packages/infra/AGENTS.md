@@ -2,7 +2,7 @@
 
 ## Overview
 
-Alchemy (v2 beta, on Effect) stack that defines the Cloudflare resources: a D1 database, a private R2 bucket for employee documents (`DOCUMENTS`, no public or r2.dev access), the invitation email Queue with its throttled consumer, the `extractor` container (`apps/extractor`, built from its Dockerfile and bound to the Worker as the `EXTRACTOR` Durable Object, so it has no public URL; at most 3 `basic` instances) and the `web` Worker built from `apps/web` (with an every-minute cron that feeds the queue). The stack outputs `databaseName`.
+Alchemy (v2 beta, on Effect) stack that defines the Cloudflare resources: a D1 database, a private R2 bucket for employee documents (`DOCUMENTS`, no public or r2.dev access), the invitation email Queue with its throttled consumer, the `extractor` container (`apps/extractor`, built from its Dockerfile with the `durable_object` scheduling policy and bound as `EXTRACTOR` through the `Extractor` Durable Object class, so it has no public URL; the class picks image and size, and `CONTAINER_INSTANCES` in `apps/web/src/services/extractor.ts` caps it at 3) and the `web` Worker built from `apps/web` (with an every-minute cron that feeds the queue). The stack outputs `databaseName`.
 
 ## Key files
 
