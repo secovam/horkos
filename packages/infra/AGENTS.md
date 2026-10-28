@@ -9,14 +9,15 @@ Alchemy (v2 beta, on Effect) stack that defines the Cloudflare resources: a D1 d
 | File | Owns |
 | --- | --- |
 | `alchemy.run.ts` | Resources and the Worker bindings (`DB`, `DOCUMENTS`, `INVITATION_QUEUE`, `EXTRACTOR`, `EMAIL`, `EMAIL_FROM`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`) |
-| `.env.schema` | Deploy secrets such as `ALCHEMY_PASSWORD` |
+| `.env.schema` | `APP_ENV` (stage), the Infisical plugin and its machine identity credentials |
+| `.env.testing`, `.env.production` | Per-stage overrides pulled from Infisical with `infisical()`: `BETTER_AUTH_SECRET`, `ALCHEMY_PASSWORD`, `EMAIL_FROM`, `WEB_DOMAIN` |
 
 ## Commands
 
 - `pnpm dev` (root): runs `alchemy dev` behind portless at https://horkos.localhost (worktrees get a prefix; `PORTLESS=0 pnpm dev` bypasses). It starts the web app with its bindings; `PORT` and `PORTLESS_URL` (set by portless) feed the dev port and `BETTER_AUTH_URL`.
 - `pnpm deploy` / `pnpm destroy` (root): interactive.
 - `pnpm exec alchemy profile edit` (here): set up provider accounts.
-- `pnpm exec alchemy deploy --stage production` (here): production deploy.
+- `APP_ENV=testing pnpm exec alchemy deploy --stage testing` / `APP_ENV=production pnpm exec alchemy deploy --stage production` (here): deploy a stage. `APP_ENV` picks the Infisical environment of the same slug and needs `INFISICAL_CLIENT_ID` and `INFISICAL_CLIENT_SECRET` in `packages/infra/.env.local` (gitignored).
 
 ## Conventions
 
