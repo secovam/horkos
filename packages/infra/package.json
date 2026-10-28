@@ -6,6 +6,8 @@
     "check-types": "tsc --noEmit",
     "dev": "alchemy dev",
     "deploy": "alchemy deploy",
+    "deploy:testing": "APP_ENV=testing alchemy deploy --stage testing",
+    "deploy:production": "APP_ENV=production alchemy deploy --stage production",
     "destroy": "alchemy destroy"
   },
   "dependencies": {

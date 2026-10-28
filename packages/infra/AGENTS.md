@@ -17,7 +17,7 @@ Alchemy (v2 beta, on Effect) stack that defines the Cloudflare resources: a D1 d
 - `pnpm dev` (root): runs `alchemy dev` behind portless at https://horkos.localhost (worktrees get a prefix; `PORTLESS=0 pnpm dev` bypasses). It starts the web app with its bindings; `PORT` and `PORTLESS_URL` (set by portless) feed the dev port and `BETTER_AUTH_URL`.
 - `pnpm deploy` / `pnpm destroy` (root): interactive.
 - `pnpm exec alchemy profile edit` (here): set up provider accounts.
-- `APP_ENV=testing pnpm exec alchemy deploy --stage testing` / `APP_ENV=production pnpm exec alchemy deploy --stage production` (here): deploy a stage. `APP_ENV` picks the Infisical environment of the same slug and needs `INFISICAL_CLIENT_ID` and `INFISICAL_CLIENT_SECRET` in `packages/infra/.env.local` (gitignored).
+- `pnpm deploy:testing` / `pnpm deploy:production` (root or here): deploy a stage with the matching `APP_ENV`, which picks the Infisical environment of the same slug and needs `INFISICAL_CLIENT_ID` and `INFISICAL_CLIENT_SECRET` in `packages/infra/.env.local` (gitignored).
 
 ## Conventions
 
